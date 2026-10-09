@@ -1,0 +1,1215 @@
+/* =========================================================
+   THE HAUNTED MAP - STYLESHEET
+   Accurate cartographic reproduction & interactive explorer
+   ========================================================= */
+
+@font-face {
+  font-family: 'TreasureMap';
+  src: url('../fonts/TreasureMap/Treamd.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Fraunces';
+  src: url('../fonts/Fraunces/Fraunces-VariableFont_SOFT,WONK,opsz,wght.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Roboto';
+  src: url('../fonts/Roboto/Roboto-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Roboto';
+  src: url('../fonts/Roboto/Roboto-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+}
+
+:root {
+  --bg-ocean: #222327;
+  --bg-land: #3f3f41;
+  --border-country: #222327;
+  --grid-graticule: rgba(90, 90, 95, 0.4);
+  --gold-accent: #f5b041;
+  --gold-glow: #f0f921;
+  --gold-card-border: #f0c05a;
+  --gold-title: #e67e22;
+  --gold-badge-bg: #342103;
+  --gold-badge-border: #ffe1aa;
+  --card-dark-bg: rgba(22, 22, 26, 0.92);
+  --card-dark-hover: rgba(28, 28, 34, 0.98);
+  --text-main: #e2e2e2;
+  --text-muted: #adadad;
+  --header-glow: 0 0 25px rgba(230, 126, 34, 0.45);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  background-color: #151518;
+  color: var(--text-main);
+  font-family: 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* App Container */
+#app {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  background-color: #121214;
+}
+
+/* Top App Header / Bar */
+.top-bar {
+  height: 54px;
+  background: linear-gradient(180deg, #1f1f24 0%, #17171b 100%);
+  border-bottom: 1px solid rgba(240, 192, 90, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  z-index: 1000;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
+}
+
+.brand-area {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+}
+
+.brand-title {
+  font-family: 'TreasureMap', cursive;
+  font-size: 26px;
+  color: var(--gold-title);
+  letter-spacing: 1px;
+  text-shadow: 0 2px 8px rgba(230, 126, 34, 0.4);
+}
+
+.brand-subtitle {
+  font-family: 'Fraunces', serif;
+  font-size: 13px;
+  color: #d8d8d8;
+  font-weight: 300;
+  letter-spacing: 0.5px;
+}
+
+.top-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Control Buttons */
+.btn {
+  background: rgba(45, 45, 52, 0.85);
+  border: 1px solid rgba(240, 192, 90, 0.35);
+  color: #f0f0f0;
+  padding: 6px 14px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.btn:hover {
+  background: rgba(60, 60, 72, 1);
+  border-color: var(--gold-card-border);
+  box-shadow: 0 0 10px rgba(240, 192, 90, 0.3);
+  transform: translateY(-1px);
+}
+
+.btn.active {
+  background: rgba(230, 126, 34, 0.25);
+  border-color: var(--gold-title);
+  color: #ffd8a8;
+  box-shadow: 0 0 8px rgba(230, 126, 34, 0.4);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #b86716, #7a3e05);
+  border-color: #f39c12;
+  color: #fff;
+  font-weight: 600;
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, #cf751a, #944d06);
+  box-shadow: 0 0 14px rgba(243, 156, 18, 0.5);
+}
+
+/* Mode Switcher Tabs */
+.view-mode-toggle {
+  display: flex;
+  background: rgba(20, 20, 24, 0.9);
+  border: 1px solid rgba(240, 192, 90, 0.3);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.view-mode-toggle button {
+  background: transparent;
+  border: none;
+  color: #a0a0a5;
+  padding: 6px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.view-mode-toggle button.active {
+  background: rgba(240, 192, 90, 0.18);
+  color: #ffde94;
+  font-weight: 600;
+}
+
+/* Main Viewport Container */
+.viewport-container {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  background-color: var(--bg-ocean);
+}
+
+/* Map Wrapper for Leaflet */
+#map-viewport {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  background-color: var(--bg-ocean);
+  z-index: 10;
+}
+
+/* Custom Leaflet Styling */
+.leaflet-container {
+  background: var(--bg-ocean) !important;
+  outline: none;
+}
+
+/* Poster Layout Overlay View */
+#poster-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 50;
+  display: block;
+}
+
+/* Aspect-Ratio Box for Faithful Poster Layout */
+.poster-stage {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 100%;
+  height: 100%;
+  max-width: 100vw;
+  max-height: calc(100vw * 9 / 16);
+  pointer-events: none;
+}
+
+@media (min-aspect-ratio: 16/9) {
+  .poster-stage {
+    width: calc(100vh * 16 / 9);
+    height: 100%;
+    max-width: none;
+  }
+}
+
+/* Poster Header in Overlay */
+.poster-header {
+  position: absolute;
+  top: 3.5%;
+  left: 3.5%;
+  pointer-events: auto;
+  text-shadow: 0 3px 12px rgba(0, 0, 0, 0.9);
+}
+
+.poster-header h1 {
+  font-family: 'TreasureMap', cursive;
+  font-size: clamp(34px, 4.6vw, 68px);
+  color: var(--gold-title);
+  letter-spacing: 2px;
+  line-height: 1.05;
+  filter: drop-shadow(0 2px 8px rgba(0,0,0,0.8));
+}
+
+.poster-header h2 {
+  font-family: 'Fraunces', serif;
+  font-size: clamp(14px, 1.4vw, 22px);
+  color: #f5f5f5;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  margin-top: 4px;
+  text-shadow: 0 2px 6px rgba(0,0,0,0.9);
+}
+
+/* Samhain Narrative Article (Top Right) */
+.poster-article {
+  position: absolute;
+  top: 3.5%;
+  right: 2.5%;
+  width: 22%;
+  min-width: 260px;
+  font-family: 'Roboto', sans-serif;
+  font-size: clamp(9px, 0.72vw, 12px);
+  line-height: 1.4;
+  color: #cfcfd4;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
+  pointer-events: auto;
+  background: rgba(20, 20, 24, 0.65);
+  backdrop-filter: blur(4px);
+  padding: 12px 14px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.poster-article p {
+  margin-bottom: 8px;
+  text-align: justify;
+}
+
+.poster-article .citation {
+  font-style: italic;
+  color: #9e9ea6;
+  font-size: 0.9em;
+}
+
+/* Interactive Poster Cards (Anchored to Leaflet Map) */
+.folklore-card-leaflet-wrapper {
+  background: transparent !important;
+  border: none !important;
+  overflow: visible !important;
+}
+
+.folklore-card {
+  width: 215px;
+  background: var(--card-dark-bg);
+  border: 1.5px solid var(--gold-card-border);
+  border-radius: 8px;
+  padding: 8px 10px 10px 10px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.75), 0 0 10px rgba(240, 192, 90, 0.15);
+  pointer-events: auto;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  backdrop-filter: blur(8px);
+}
+
+.folklore-card:hover, .folklore-card.highlighted {
+  background: var(--card-dark-hover);
+  border-color: #ffd700;
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.9), 0 0 20px rgba(255, 215, 0, 0.45);
+  z-index: 100;
+}
+
+.folklore-card.dragging {
+  cursor: grabbing !important;
+  border-color: #f39c12;
+  box-shadow: 0 16px 45px rgba(0, 0, 0, 0.95), 0 0 28px rgba(243, 156, 18, 0.65);
+  z-index: 2000 !important;
+  transform: scale(1.03);
+}
+
+.card-title {
+  font-family: 'Roboto', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--gold-title);
+  letter-spacing: 0.3px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.card-image-box {
+  width: 100%;
+  height: 125px;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid rgba(240, 192, 90, 0.45);
+  background: #0d0d0f;
+  position: relative;
+}
+
+/* Force 100% width and height on card images: Leaflet's leaflet.css applies
+   '.leaflet-container .leaflet-marker-pane img { width: auto; max-width: none !important; }'
+   which overrides standard rules. We use max specificity and !important so every image fills 100% of its frame edge-to-edge. */
+.leaflet-container .leaflet-marker-pane .folklore-card .card-image-box img,
+.leaflet-container .leaflet-marker-pane .card-image-box img,
+.leaflet-container .card-image-box img,
+.folklore-card .card-image-box img,
+.card-image-box img {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 100% !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  min-height: 100% !important;
+  object-fit: cover !important;
+  pointer-events: none;
+  -webkit-user-drag: none;
+  user-drag: none;
+  display: block !important;
+  transition: transform 0.3s ease;
+}
+
+/* Custom focal positions to perfectly fill and frame each historical photo */
+.leaflet-container .card-image-box img.card-img-1,
+.card-image-box img.card-img-1 { /* The Dullahan - Headless Horseman engraving */
+  object-position: center center !important;
+}
+
+.leaflet-container .card-image-box img.card-img-2,
+.card-image-box img.card-img-2 { /* Sir Fulke Greville - Elizabethan portrait */
+  object-position: center 25% !important;
+}
+
+.leaflet-container .card-image-box img.card-img-3,
+.card-image-box img.card-img-3 { /* Witches of Trier / Wicked Witch of the West */
+  object-position: 58% center !important;
+}
+
+.leaflet-container .card-image-box img.card-img-4,
+.card-image-box img.card-img-4 { /* Frankenstein - Boris Karloff face and brow */
+  object-position: center 20% !important;
+}
+
+.leaflet-container .card-image-box img.card-img-5,
+.card-image-box img.card-img-5 { /* Werewolves of Valais */
+  object-position: center center !important;
+}
+
+.leaflet-container .card-image-box img.card-img-6,
+.card-image-box img.card-img-6 { /* Krampus - Alpine horns and tongue */
+  object-position: center 20% !important;
+}
+
+.leaflet-container .card-image-box img.card-img-7,
+.card-image-box img.card-img-7 { /* Dracula - Christopher Lee fangs */
+  object-position: center 30% !important;
+}
+
+.folklore-card:hover .card-image-box img {
+  transform: scale(1.05);
+}
+
+.card-desc {
+  font-size: 10px;
+  line-height: 1.38;
+  color: #cfcfd2;
+  text-align: left;
+  user-select: none;
+  transition: all 0.3s ease;
+}
+
+/* Active Spooky Voice Reading & Text Highlighting State */
+.folklore-card.reading-active {
+  border-color: #ffd700 !important;
+  box-shadow: 0 0 25px rgba(255, 215, 0, 0.85), 0 0 55px rgba(243, 156, 18, 0.6) !important;
+  animation: cardReadingPulse 1.8s ease-in-out infinite alternate !important;
+  z-index: 500 !important;
+}
+
+@keyframes cardReadingPulse {
+  0% {
+    box-shadow: 0 0 16px rgba(255, 215, 0, 0.65), 0 0 35px rgba(243, 156, 18, 0.45);
+    border-color: #ffd700;
+  }
+  100% {
+    box-shadow: 0 0 32px rgba(255, 215, 0, 0.95), 0 0 65px rgba(243, 156, 18, 0.85);
+    border-color: #fff6a6;
+  }
+}
+
+.folklore-card.reading-active .card-title {
+  color: #fff099 !important;
+  text-shadow: 0 0 10px rgba(255, 215, 0, 0.9);
+}
+
+.card-title.title-speaking {
+  color: #fff6a6 !important;
+  text-shadow: 0 0 12px #ffd700, 0 0 24px #e67e22 !important;
+}
+
+.narration-title-prefix.title-speaking {
+  color: #fff6a6 !important;
+  text-shadow: 0 0 12px #ffd700, 0 0 24px #e67e22 !important;
+  background: rgba(243, 156, 18, 0.45);
+  border-radius: 4px;
+  padding: 0 4px;
+}
+
+.folklore-card.reading-active .card-desc {
+  background: rgba(240, 192, 90, 0.14);
+  border-left: 3px solid #ffd700;
+  padding: 6px 8px;
+  border-radius: 4px;
+  box-shadow: inset 0 0 12px rgba(240, 192, 90, 0.16);
+}
+
+/* Animated 3-bar sound equalizer in title during speech */
+.voice-wave-indicator {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2.5px;
+  height: 12px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.voice-wave-indicator span {
+  display: block;
+  width: 2.5px;
+  background: #ffd700;
+  border-radius: 1px;
+  box-shadow: 0 0 6px rgba(255, 215, 0, 0.8);
+  animation: waveBounce 0.75s ease-in-out infinite alternate;
+}
+
+.voice-wave-indicator span:nth-child(1) { height: 6px; animation-delay: 0.1s; }
+.voice-wave-indicator span:nth-child(2) { height: 12px; animation-delay: 0.3s; }
+.voice-wave-indicator span:nth-child(3) { height: 8px; animation-delay: 0.2s; }
+
+@keyframes waveBounce {
+  0% { height: 3px; opacity: 0.5; }
+  100% { height: 12px; opacity: 1; }
+}
+
+/* Synchronized Spoken Lore Words */
+.lore-word {
+  display: inline;
+  border-radius: 2px;
+  padding: 0 1px;
+  transition: color 0.15s ease, background 0.15s ease, text-shadow 0.15s ease;
+}
+
+.lore-word.word-speaking {
+  color: #ffffff !important;
+  background: rgba(243, 156, 18, 0.55) !important;
+  text-shadow: 0 0 8px #ffd700, 0 0 16px #f39c12, 0 0 24px #d35400 !important;
+  font-weight: 700 !important;
+  box-shadow: 0 0 8px rgba(243, 156, 18, 0.8) !important;
+}
+
+.lore-word.word-spoken {
+  color: #fff0c2 !important;
+  text-shadow: 0 0 4px rgba(240, 192, 90, 0.35);
+}
+
+/* =========================================================
+   SPOOKY CARTOGRAPHIC ROUTE & LEADER LINES
+   ========================================================= */
+
+/* Deep ethereal haze glow */
+.spooky-route-haze {
+  stroke-linecap: round !important;
+  stroke-linejoin: round !important;
+  filter: drop-shadow(0 0 16px rgba(230, 126, 34, 0.75));
+  animation: eerieHazePulse 4s ease-in-out infinite alternate;
+}
+
+/* Pulsing ectoplasm aura */
+.spooky-route-aura {
+  stroke-linecap: round !important;
+  stroke-linejoin: round !important;
+  filter: drop-shadow(0 0 8px #f0f921) drop-shadow(0 0 22px rgba(240, 249, 33, 0.65));
+  animation: eerieAuraPulse 3s ease-in-out infinite alternate;
+}
+
+/* Wandering spirit stream - creeping dash along the road */
+.spooky-route-spirits {
+  stroke-linecap: round !important;
+  stroke-linejoin: round !important;
+  stroke-dasharray: 10, 22;
+  filter: drop-shadow(0 0 6px #ffffff) drop-shadow(0 0 14px #f0f921);
+  animation: spiritCrawl 24s linear infinite;
+}
+
+/* Inner pale core */
+.spooky-route-core {
+  stroke-linecap: round !important;
+  stroke-linejoin: round !important;
+  filter: drop-shadow(0 0 4px #ffffff);
+}
+
+/* Spooky Phantom Tether (Leader Line connecting Pin to Card) */
+.card-leader-line {
+  stroke-linecap: round !important;
+  stroke-linejoin: round !important;
+  stroke-dasharray: 6, 9;
+  filter: drop-shadow(0 0 6px #f0f921) drop-shadow(0 0 12px rgba(230, 126, 34, 0.75));
+  animation: tetherCrawl 12s linear infinite;
+  transition: stroke 0.2s ease, stroke-width 0.2s ease, opacity 0.2s ease;
+}
+
+@keyframes spiritCrawl {
+  from { stroke-dashoffset: 0; }
+  to { stroke-dashoffset: -1000; }
+}
+
+@keyframes tetherCrawl {
+  from { stroke-dashoffset: 0; }
+  to { stroke-dashoffset: -200; }
+}
+
+@keyframes eerieHazePulse {
+  0% {
+    stroke-opacity: 0.25;
+    stroke-width: 18px;
+    filter: drop-shadow(0 0 10px rgba(230, 126, 34, 0.5));
+  }
+  50% {
+    stroke-opacity: 0.55;
+    stroke-width: 26px;
+    filter: drop-shadow(0 0 22px rgba(243, 156, 18, 0.95)) drop-shadow(0 0 40px rgba(230, 126, 34, 0.6));
+  }
+  100% {
+    stroke-opacity: 0.25;
+    stroke-width: 18px;
+    filter: drop-shadow(0 0 10px rgba(230, 126, 34, 0.5));
+  }
+}
+
+@keyframes eerieAuraPulse {
+  0% {
+    stroke-opacity: 0.5;
+    stroke-width: 9px;
+  }
+  50% {
+    stroke-opacity: 0.9;
+    stroke-width: 14px;
+    filter: drop-shadow(0 0 12px #f0f921) drop-shadow(0 0 25px rgba(255, 230, 0, 0.85));
+  }
+  100% {
+    stroke-opacity: 0.5;
+    stroke-width: 9px;
+  }
+}
+
+.card-badge-tag {
+  display: inline-block;
+  font-size: 9px;
+  color: #a8946e;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Inset Map Box (Bottom Left) */
+.poster-inset-box {
+  position: absolute;
+  bottom: 3.5%;
+  left: 2.5%;
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.inset-map-frame {
+  width: 180px;
+  height: 110px;
+  border: 1.5px solid rgba(240, 192, 90, 0.45);
+  background: #191a1d;
+  position: relative;
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.6);
+}
+
+#inset-map-canvas {
+  width: 100%;
+  height: 100%;
+}
+
+.inset-legend {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  color: #c0c0c5;
+  font-size: 11px;
+}
+
+/* Vintage Compass Rose */
+.compass-rose {
+  width: 44px;
+  height: 44px;
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,0.8));
+}
+
+/* Scale Bar */
+.scalebar-custom {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 10px;
+  color: #cfcfd4;
+  font-family: 'Roboto', sans-serif;
+}
+
+.scalebar-line {
+  display: flex;
+  width: 100px;
+  height: 4px;
+  border: 1px solid #cfcfd4;
+  border-top: none;
+}
+
+.scalebar-ticks {
+  display: flex;
+  justify-content: space-between;
+  width: 100px;
+  font-size: 9px;
+}
+
+/* Leaflet Custom Marker: Numbered Gold Badge */
+.creature-marker-pin {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--gold-badge-bg);
+  border: 2.5px solid var(--gold-badge-border);
+  color: var(--gold-title);
+  font-family: 'Roboto', sans-serif;
+  font-weight: 700;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.9), 0 0 12px rgba(240, 192, 90, 0.6);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.creature-marker-pin:hover, .creature-marker-pin.active {
+  transform: scale(1.3);
+  border-color: #ffffff;
+  color: #fffae8;
+  background: #5c3503;
+  box-shadow: 0 0 20px rgba(240, 249, 33, 0.9), 0 0 35px rgba(230, 126, 34, 0.7);
+  z-index: 9999 !important;
+}
+
+/* Traveling Spectral Marker for Tour */
+.spectral-marker-wrapper {
+  background: transparent !important;
+  border: none !important;
+  overflow: visible !important;
+}
+
+.spectral-cursor-container {
+  width: 36px;
+  height: 36px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.spectral-cursor-glow {
+  position: absolute;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(240, 249, 33, 0.85) 0%, rgba(230, 126, 34, 0.4) 55%, transparent 75%);
+  filter: drop-shadow(0 0 10px #f0f921);
+  animation: pulseGhostCursor 1.4s infinite ease-in-out alternate;
+}
+
+.spectral-cursor-icon {
+  width: 30px;
+  height: 30px;
+  position: relative;
+  z-index: 2;
+  filter: drop-shadow(0 0 6px #f0f921);
+}
+
+@keyframes pulseGhostCursor {
+  0% { transform: scale(0.9); opacity: 0.8; }
+  100% { transform: scale(1.25); opacity: 1; filter: drop-shadow(0 0 16px #f0f921) drop-shadow(0 0 24px #e67e22); }
+}
+
+/* Country Labels */
+.map-country-label {
+  font-family: 'Roboto', sans-serif;
+  font-weight: 700;
+  font-size: 15px;
+  color: #c2bebe;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9), 0 0 8px rgba(0, 0, 0, 0.7);
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+/* Floating Tour Dock Player */
+.tour-dock {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(18, 18, 22, 0.92);
+  border: 1px solid rgba(240, 192, 90, 0.4);
+  border-radius: 30px;
+  padding: 8px 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  z-index: 100;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.8), 0 0 16px rgba(240, 192, 90, 0.2);
+  backdrop-filter: blur(8px);
+}
+
+.tour-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.tour-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #adadad;
+}
+
+.tour-curr-stop {
+  font-family: 'Fraunces', serif;
+  font-size: 14px;
+  color: #ffc966;
+  font-weight: 600;
+}
+
+.tour-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tour-btn {
+  background: rgba(40, 40, 48, 0.9);
+  border: 1px solid rgba(240, 192, 90, 0.3);
+  color: #f0f0f0;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.tour-btn:hover {
+  background: rgba(65, 65, 78, 1);
+  border-color: var(--gold-card-border);
+  color: #ffde94;
+  transform: scale(1.1);
+}
+
+.tour-btn.play-btn {
+  background: linear-gradient(135deg, #b86716, #7a3e05);
+  border-color: #f39c12;
+  width: 40px;
+  height: 40px;
+  font-size: 16px;
+}
+
+.tour-progress-bar-container {
+  width: 140px;
+  height: 6px;
+  background: rgba(45, 45, 50, 0.8);
+  border-radius: 3px;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.tour-progress-bar {
+  width: 0%;
+  height: 100%;
+  background: linear-gradient(90deg, #e67e22, #f0f921);
+  transition: width 0.15s ease;
+}
+
+/* Spooky Voice Button & Selector */
+.tour-btn.voice-btn {
+  font-size: 15px;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.tour-btn.voice-btn.active {
+  background: linear-gradient(135deg, #7c3aed, #4c1d95);
+  border-color: #c4b5fd;
+  color: #ffffff;
+  box-shadow: 0 0 14px rgba(167, 139, 250, 0.6);
+}
+
+.tour-btn.voice-btn.muted {
+  background: rgba(30, 30, 35, 0.85);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #777;
+  opacity: 0.65;
+}
+
+.spooky-voice-select {
+  background: rgba(28, 28, 36, 0.95);
+  border: 1px solid rgba(240, 192, 90, 0.45);
+  color: #ffde94;
+  font-size: 11px;
+  font-family: 'Roboto', sans-serif;
+  padding: 6px 10px;
+  border-radius: 16px;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.spooky-voice-select:hover, .spooky-voice-select:focus {
+  border-color: #ffd700;
+  box-shadow: 0 0 12px rgba(255, 215, 0, 0.4);
+}
+
+.spooky-voice-select option {
+  background: #18181f;
+  color: #f0f0f0;
+}
+
+/* Floating Spooky Voice Narration Subtitle Banner */
+.tour-narration-banner {
+  position: absolute;
+  bottom: 84px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 680px;
+  width: calc(100% - 48px);
+  background: rgba(14, 14, 18, 0.96);
+  border: 1.5px solid rgba(240, 192, 90, 0.6);
+  border-radius: 14px;
+  padding: 12px 20px;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.92), 0 0 28px rgba(240, 192, 90, 0.35);
+  backdrop-filter: blur(14px);
+  z-index: 150;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  pointer-events: auto;
+}
+
+.tour-narration-banner.hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-50%) translateY(14px);
+}
+
+.narration-badge {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: #ffd700;
+  font-weight: 700;
+}
+
+.narration-speaker-info {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.pulsing-skull {
+  display: inline-block;
+  animation: skullPulse 1.8s ease-in-out infinite alternate;
+}
+
+@keyframes skullPulse {
+  0% { transform: scale(0.92); opacity: 0.75; }
+  100% { transform: scale(1.18); opacity: 1; filter: drop-shadow(0 0 6px #ffd700); }
+}
+
+.narration-stop-btn {
+  background: rgba(45, 45, 55, 0.85);
+  border: 1px solid rgba(240, 192, 90, 0.4);
+  color: #e0e0e5;
+  border-radius: 12px;
+  padding: 3px 10px;
+  font-size: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.narration-stop-btn:hover {
+  background: #7a2020;
+  border-color: #ff6b6b;
+  color: #fff;
+}
+
+.narration-text {
+  font-family: 'Fraunces', serif;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #e8e8ed;
+}
+
+.narration-title-prefix {
+  color: #ffd700;
+  font-weight: 700;
+  margin-right: 6px;
+  display: inline;
+}
+
+/* Side Grimoire Drawer for Lore & Expanded Gallery */
+.grimoire-drawer {
+  position: absolute;
+  top: 54px;
+  right: -420px;
+  width: 400px;
+  height: calc(100% - 54px);
+  background: rgba(18, 18, 22, 0.96);
+  border-left: 1.5px solid rgba(240, 192, 90, 0.35);
+  box-shadow: -10px 0 35px rgba(0, 0, 0, 0.8);
+  z-index: 120;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+  backdrop-filter: blur(12px);
+  transition: right 0.35s cubic-bezier(0.2, 0.9, 0.2, 1);
+}
+
+.grimoire-drawer.open {
+  right: 0;
+}
+
+.grimoire-close-btn {
+  align-self: flex-end;
+  background: transparent;
+  border: none;
+  color: #adadad;
+  font-size: 22px;
+  cursor: pointer;
+}
+
+.grimoire-close-btn:hover {
+  color: #ffd700;
+}
+
+.grimoire-header h3 {
+  font-family: 'Fraunces', serif;
+  font-size: 24px;
+  color: var(--gold-title);
+  margin-bottom: 4px;
+}
+
+.grimoire-subtitle {
+  color: #c5a059;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+}
+
+.grimoire-hero-image {
+  width: 100%;
+  height: 220px;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid rgba(240, 192, 90, 0.4);
+  cursor: pointer;
+}
+
+.grimoire-hero-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.3s ease;
+}
+
+.grimoire-hero-image:hover img {
+  transform: scale(1.04);
+}
+
+.grimoire-lore-text {
+  font-size: 13px;
+  line-height: 1.6;
+  color: #d8d8de;
+}
+
+.grimoire-gallery-title {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #a8946e;
+  margin-top: 8px;
+}
+
+.grimoire-gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.gallery-thumb {
+  width: 100%;
+  height: 70px;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.gallery-thumb:hover {
+  border-color: #ffd700;
+  transform: scale(1.06);
+}
+
+.gallery-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Lightbox Modal */
+.lightbox-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.92);
+  z-index: 2000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  padding: 40px;
+}
+
+.lightbox-modal.open {
+  display: flex;
+}
+
+.lightbox-img {
+  max-width: 90vw;
+  max-height: 82vh;
+  border-radius: 6px;
+  border: 2px solid var(--gold-card-border);
+  box-shadow: 0 0 30px rgba(0, 0, 0, 0.9);
+}
+
+.lightbox-caption {
+  margin-top: 14px;
+  color: #e5e5e5;
+  font-family: 'Fraunces', serif;
+  font-size: 16px;
+}
+
+.lightbox-close {
+  position: absolute;
+  top: 24px;
+  right: 32px;
+  font-size: 36px;
+  color: #fff;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+}
+
+.lightbox-close:hover {
+  color: #ffd700;
+}
+
+/* Layer Control Panel for Explorer View */
+.map-layer-panel {
+  position: absolute;
+  top: 70px;
+  left: 20px;
+  background: rgba(18, 18, 22, 0.9);
+  border: 1px solid rgba(240, 192, 90, 0.35);
+  border-radius: 8px;
+  padding: 12px 16px;
+  z-index: 90;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  display: none;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 12px;
+}
+
+.map-layer-panel.visible {
+  display: flex;
+}
+
+.layer-panel-title {
+  font-family: 'Fraunces', serif;
+  font-size: 14px;
+  color: #ffd8a8;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 6px;
+}
+
+.layer-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  color: #cfcfd2;
+}
+
+.layer-toggle-row input {
+  accent-color: #f39c12;
+  cursor: pointer;
+}
+
+/* Floating Mist / Fog Canvas */
+#fog-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 45;
+  opacity: 0.32;
+}
+
+/* Responsive adjustments */
+@media (max-width: 900px) {
+  .brand-subtitle { display: none; }
+  .poster-article { display: none; }
+  .grimoire-drawer { width: 100%; right: -100%; }
+}

@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Haunted Map — European Folklore Behind Halloween Costumes</title>
+  
+  <!-- Leaflet Local Vendor Styles -->
+  <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+
+  <!-- Application Stylesheet -->
+  <link rel="stylesheet" href="css/haunted_map.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Top Navigation & Controls Header -->
+    <header class="top-bar">
+      <div class="brand-area">
+        <span class="brand-title">The Haunted Map</span>
+        <span class="brand-subtitle">The European Folklore Behind Familiar Halloween Costumes</span>
+      </div>
+
+      <div class="top-controls">
+        <div class="view-mode-toggle">
+          <button id="mode-poster-btn" class="active" title="Switch to the exact classic poster reproduction view">Poster View</button>
+          <button id="mode-explorer-btn" title="Switch to edge-to-edge interactive map exploration">Explorer View</button>
+        </div>
+        <button id="audio-toggle-btn" class="btn" title="Toggle eerie Web Audio gothic atmospheric soundscape">🔕 Audio: Off</button>
+        <button id="reset-cards-btn" class="btn" title="Reset all dragged cards back to their initial poster positions">✥ Reset Cards</button>
+        <button id="reset-view-btn" class="btn" title="Reset map to full Europe framing">↺ Reset Framing</button>
+      </div>
+    </header>
+
+    <!-- Main Viewport Area -->
+    <main class="viewport-container">
+      <!-- Leaflet Interactive Map Viewport -->
+      <div id="map-viewport"></div>
+
+      <!-- Atmospheric Mist / Fog Particle Canvas -->
+      <canvas id="fog-canvas"></canvas>
+
+      <!-- Poster Overlay: 16:9 Aspect Ratio Layout -->
+      <div id="poster-overlay">
+        <div class="poster-stage">
+          <!-- Title & Subtitle in Poster -->
+          <div class="poster-header">
+            <h1>The Haunted Map</h1>
+            <h2>The European Folklore Behind Familiar Halloween Costumes</h2>
+          </div>
+
+          <!-- Samhain History Narrative Box (Top Right) -->
+          <div id="poster-article-box" class="poster-article">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <span style="font-family: 'Fraunces', serif; font-size: 13px; color: #ffd8a8; font-weight: 600;">Folklore Heritage</span>
+              <button id="article-toggle-btn" style="background: transparent; border: none; color: #cfcfd2; font-size: 14px; cursor: pointer; padding: 0 4px;" title="Minimize / Expand">─</button>
+            </div>
+            <div id="poster-article-content">
+              <p>
+                The tradition of Halloween costumes dates back over 2,000 years to the ancient Celtic festival of Samhain, celebrated in parts of what are now Ireland, Scotland, and Britain. Samhain marked the end of the harvest and the beginning of winter, a season associated with death and darkness. Celts believed that on the night of October 31, the veil between the living and the dead thinned, allowing spirits to roam the earth. To protect themselves or confuse these souls, people wore disguises made from animal skins and heads, blending in with the supernatural or attempting to ward them off.
+              </p>
+              <p>
+                As Christianity spread through Europe, many pagan customs merged with Christian holidays. Samhain became linked to All Hallows’ Eve, the night before All Saints’ Day. In the Middle Ages, people practiced “souling,” where the poor went door to door offering prayers for the dead in exchange for food. Participants often wore masks or costumes, both as a spiritual gesture and as a way to hide from evil spirits. These early disguises helped shape the beginnings of Halloween costume traditions as we know them today.
+              </p>
+              <div class="citation">
+                Excerpted from Dressed to Disturb: A Haunted History of Halloween Costumes, by Ashley Chan
+              </div>
+            </div>
+          </div>
+
+          <!-- Dynamic Cards Container (7 Story Cards positioned around the route) -->
+          <div id="poster-cards-container"></div>
+
+          <!-- Bottom Left Inset Box: World Mini-Map, Compass Rose, Scale Bar -->
+          <div class="poster-inset-box">
+            <div class="inset-map-frame">
+              <canvas id="inset-map-canvas"></canvas>
+            </div>
+            
+            <div class="inset-legend">
+              <!-- Vintage 8-point Compass Rose SVG -->
+              <svg class="compass-rose" viewBox="0 0 100 100">
+                <!-- North Letter -->
+                <text x="50" y="14" fill="#cfcfd4" font-family="'Fraunces', serif" font-size="13" font-weight="bold" text-anchor="middle">N</text>
+                <!-- Compass Points -->
+                <!-- North Point -->
+                <polygon points="50,18 46,50 50,46" fill="#f5f5f5" />
+                <polygon points="50,18 54,50 50,46" fill="#888888" />
+                <!-- South Point -->
+                <polygon points="50,82 46,50 50,54" fill="#888888" />
+                <polygon points="50,82 54,50 50,54" fill="#f5f5f5" />
+                <!-- East Point -->
+                <polygon points="82,50 50,46 54,50" fill="#f5f5f5" />
+                <polygon points="82,50 50,54 54,50" fill="#888888" />
+                <!-- West Point -->
+                <polygon points="18,50 50,46 46,50" fill="#888888" />
+                <polygon points="18,50 50,54 46,50" fill="#f5f5f5" />
+                <!-- Corner Diamonds (NE, NW, SE, SW) -->
+                <polygon points="50,50 72,28 50,45" fill="#a0a0a5" />
+                <polygon points="50,50 28,28 45,50" fill="#66666a" />
+                <polygon points="50,50 72,72 55,50" fill="#66666a" />
+                <polygon points="50,50 28,72 50,55" fill="#a0a0a5" />
+                <!-- Center Ring & Dot -->
+                <circle cx="50" cy="50" r="3.5" fill="#f5b041" stroke="#222" stroke-width="1" />
+              </svg>
+
+              <!-- Scale Bar -->
+              <div class="scalebar-custom">
+                <div class="scalebar-ticks">
+                  <span>0</span>
+                  <span>100</span>
+                  <span>200 mi</span>
+                </div>
+                <div class="scalebar-line"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Layer Control Panel for Explorer View -->
+      <div id="map-layer-panel" class="map-layer-panel">
+        <div class="layer-panel-title">Map Layers</div>
+        <label class="layer-toggle-row">
+          <input type="checkbox" id="toggle-route" checked>
+          <span>Haunted Route & Glow</span>
+        </label>
+        <label class="layer-toggle-row">
+          <input type="checkbox" id="toggle-graticule" checked>
+          <span>5° Graticule Grid</span>
+        </label>
+        <label class="layer-toggle-row">
+          <input type="checkbox" id="toggle-cards" checked>
+          <span>Story Cards (Draggable)</span>
+        </label>
+        <label class="layer-toggle-row">
+          <input type="checkbox" id="toggle-leaders" checked>
+          <span>Card Connector Lines</span>
+        </label>
+        <label class="layer-toggle-row">
+          <input type="checkbox" id="toggle-mist" checked>
+          <span>Spectral Mist & Fog</span>
+        </label>
+      </div>
+
+      <!-- Spooky Voice Narration Subtitle Banner -->
+      <div id="tour-narration-banner" class="tour-narration-banner hidden">
+        <div class="narration-badge">
+          <div class="narration-speaker-info">
+            <span class="pulsing-skull">💀</span>
+            <span id="narration-voice-tag">Crypt Phantom 🕯️</span>
+          </div>
+          <button id="narration-stop-btn" class="narration-stop-btn" title="Silence voice">⏹ Silence</button>
+        </div>
+        <div id="narration-text" class="narration-text"></div>
+      </div>
+
+      <!-- Floating Tour Player Dock -->
+      <div class="tour-dock">
+        <div class="tour-info">
+          <span class="tour-title">Haunted Journey</span>
+          <span id="tour-curr-stop-label" class="tour-curr-stop">1. The Dullahan (Ireland)</span>
+        </div>
+
+        <div class="tour-controls">
+          <button id="tour-prev-btn" class="tour-btn" title="Previous folklore stop">⏮</button>
+          <button id="tour-play-btn" class="tour-btn play-btn" title="Play or pause animated journey along route">▶</button>
+          <button id="tour-next-btn" class="tour-btn" title="Next folklore stop">⏭</button>
+          <button id="tour-voice-btn" class="tour-btn voice-btn active" title="Toggle Spooky Voice (Currently: ON)">🎙️</button>
+          <select id="spooky-voice-select" class="spooky-voice-select" title="Choose Spooky Voice Style">
+            <option value="phantom" selected>🕯️ Crypt Phantom</option>
+            <option value="whisper">👻 Ghost Whisper</option>
+            <option value="demon">💀 Shadow Demon</option>
+            <option value="vintage">📻 Vintage Radio</option>
+          </select>
+        </div>
+
+        <div id="tour-progress-container" class="tour-progress-bar-container" title="Click to jump along the journey">
+          <div id="tour-progress-bar" class="tour-progress-bar"></div>
+        </div>
+      </div>
+
+      <!-- Side Lore Drawer (Grimoire) -->
+      <aside id="grimoire-drawer" class="grimoire-drawer">
+        <button id="grimoire-close-btn" class="grimoire-close-btn" title="Close Lore Archive">✕</button>
+        <div class="grimoire-header">
+          <h3 id="grimoire-title">1. The Dullahan</h3>
+          <div id="grimoire-location" class="grimoire-subtitle">Dublin, Ireland</div>
+        </div>
+
+        <div class="grimoire-hero-image">
+          <img id="grimoire-hero-img" src="" alt="Folklore illustration" title="Click to view full image">
+        </div>
+
+        <p id="grimoire-desc" class="grimoire-lore-text" style="font-style: italic; color: #ffde94;"></p>
+        <p id="grimoire-lore" class="grimoire-lore-text"></p>
+
+        <div class="grimoire-gallery-title">Historical Archive & Castle Gallery</div>
+        <div id="grimoire-gallery" class="grimoire-gallery-grid"></div>
+      </aside>
+
+      <!-- Lightbox Modal for Full-Resolution Image Viewing -->
+      <div id="lightbox-modal" class="lightbox-modal">
+        <button id="lightbox-close-btn" class="lightbox-close">✕</button>
+        <img id="lightbox-img" class="lightbox-img" src="" alt="Full view">
+        <div id="lightbox-caption" class="lightbox-caption"></div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Local Leaflet Library -->
+  <script src="vendor/leaflet/leaflet.js"></script>
+
+  <!-- Complete Bundled GeoJSON & Folklore Dataset -->
+  <script src="data/geojson/haunted_data_bundle.js"></script>
+
+  <!-- Web Audio Gothic Sound Synthesizer -->
+  <script src="js/audio.js"></script>
+
+  <!-- Spooky Voice Narration & Real-time Text Highlighter -->
+  <script src="js/spooky_voice.js"></script>
+
+  <!-- Main Application Script -->
+  <script src="js/haunted_map.js"></script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+{
+"type": "FeatureCollection",
+"name": "the_haunted_map_source_data_creatures",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+"features": [
+{"type":"Feature","properties":{"id":null,"Name":"Dublin, Ireland","description":"1","timestamp":null,"begin":null,"end":null,"altitudeMode":null,"tessellate":-1,"extrude":0,"visibility":-1,"drawOrder":null,"icon":null},"geometry":{"type":"Point","coordinates":[-6.2603638,53.349788,0.0]}},
+{"type":"Feature","properties":{"id":null,"Name":"Warwick Castle, Warwick, UK","description":"2","timestamp":null,"begin":null,"end":null,"altitudeMode":null,"tessellate":-1,"extrude":0,"visibility":-1,"drawOrder":null,"icon":null},"geometry":{"type":"Point","coordinates":[-1.5896087,52.278077,0.0]}},
+{"type":"Feature","properties":{"id":null,"Name":"Trier, Germany","description":"3","timestamp":null,"begin":null,"end":null,"altitudeMode":null,"tessellate":-1,"extrude":0,"visibility":-1,"drawOrder":null,"icon":null},"geometry":{"type":"Point","coordinates":[6.6371734,49.7500603,0.0]}},
+{"type":"Feature","properties":{"id":null,"Name":"Burg Frankenstein, Burg Frankenstein, Mühltal, Germany","description":"4","timestamp":null,"begin":null,"end":null,"altitudeMode":null,"tessellate":-1,"extrude":0,"visibility":-1,"drawOrder":null,"icon":null},"geometry":{"type":"Point","coordinates":[8.6693267,49.7940116,0.0]}},
+{"type":"Feature","properties":{"id":null,"Name":"Valais, Switzerland","description":"5","timestamp":null,"begin":null,"end":null,"altitudeMode":null,"tessellate":-1,"extrude":0,"visibility":-1,"drawOrder":null,"icon":null},"geometry":{"type":"Point","coordinates":[7.5527738,46.1835465,0.0]}},
+{"type":"Feature","properties":{"id":null,"Name":"Salzburg, Austria","description":"6","timestamp":null,"begin":null,"end":null,"altitudeMode":null,"tessellate":-1,"extrude":0,"visibility":-1,"drawOrder":null,"icon":null},"geometry":{"type":"Point","coordinates":[13.044801,47.8014187,0.0]}},
+{"type":"Feature","properties":{"id":null,"Name":"Corvin Castle, Strada Curtea Corvinilor, Hunedoara, Romania","description":"7","timestamp":null,"begin":null,"end":null,"altitudeMode":null,"tessellate":-1,"extrude":0,"visibility":-1,"drawOrder":null,"icon":null},"geometry":{"type":"Point","coordinates":[22.8873454,45.7496189,0.0]}}
+]
+}
