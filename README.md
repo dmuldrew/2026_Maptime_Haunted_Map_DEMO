@@ -6,13 +6,6 @@ An interactive Leaflet-powered digital reproduction of a classic gothic poster m
 
 ---
 
-## 🌐 Live Website
-
-The live map is published via GitHub Pages at:  
-👉 **[https://dmuldrew.github.io/2026_Maptime_Haunted_Map_DEMO/](https://dmuldrew.github.io/2026_Maptime_Haunted_Map_DEMO/)**
-
----
-
 ## 🗺️ Maptime Seattle Workshop
 
 This project was created for and showcased at **Maptime Seattle**:
@@ -42,9 +35,7 @@ The workshop guided participants through hands-on thematic cartography, explorin
 
 ## 🚀 Deployment to GitHub Pages
 
-This repository is configured for automated static deployment to **GitHub Pages** using GitHub Actions:
-
-- **Live URL**: [https://dmuldrew.github.io/2026_Maptime_Haunted_Map_DEMO/](https://dmuldrew.github.io/2026_Maptime_Haunted_Map_DEMO/)
+This repository is configured for automated static deployment to **GitHub Pages** using GitHub Actions.
 
 ### One-time Repository Setup:
 1. Go to your repository on GitHub: [`dmuldrew/2026_Maptime_Haunted_Map_DEMO`](https://github.com/dmuldrew/2026_Maptime_Haunted_Map_DEMO).
