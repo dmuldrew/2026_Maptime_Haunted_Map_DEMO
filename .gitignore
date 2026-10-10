@@ -1,3 +1,50 @@
+# ==========================================
+# Operating System Files
+# ==========================================
 .DS_Store
-*/.DS_Store
+.DS_Store?
 ._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+[Dd]esktop.ini
+
+# ==========================================
+# Editor & IDE Directories
+# ==========================================
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+*~
+
+# ==========================================
+# GIS / QGIS Temporary & Backup Files
+# ==========================================
+*.qgs~
+*.qgz~
+*.bak
+*.gpkg-wal
+*.gpkg-shm
+*.sqlite-wal
+*.sqlite-shm
+
+# ==========================================
+# Python (Local server & data scripts)
+# ==========================================
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+
+# ==========================================
+# Environment Variables & Logs
+# ==========================================
+.env
+.env.local
+*.log
