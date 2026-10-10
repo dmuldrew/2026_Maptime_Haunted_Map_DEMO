@@ -179,23 +179,88 @@
         </div>
       </div>
 
-      <!-- Side Lore Drawer (Grimoire) -->
-      <aside id="grimoire-drawer" class="grimoire-drawer">
-        <button id="grimoire-close-btn" class="grimoire-close-btn" title="Close Lore Archive">✕</button>
-        <div class="grimoire-header">
-          <h3 id="grimoire-title">1. The Dullahan</h3>
-          <div id="grimoire-location" class="grimoire-subtitle">Dublin, Ireland</div>
+      <!-- Side Lore Tome / Grimoire Book Drawer -->
+      <aside id="grimoire-drawer" class="grimoire-drawer" aria-label="Folklore Grimoire Book">
+        <!-- 3D Book Spine Binding & Gutter on the Left -->
+        <div class="book-spine-gutter" aria-hidden="true">
+          <div class="spine-rib rib-1"></div>
+          <div class="spine-rib rib-2"></div>
+          <div class="spine-rib rib-3"></div>
+          <div class="spine-rib rib-4"></div>
+          <div class="spine-gold-emboss">CODEX OCCULTA</div>
         </div>
 
-        <div class="grimoire-hero-image">
-          <img id="grimoire-hero-img" src="" alt="Folklore illustration" title="Click to view full image">
+        <!-- Hanging Silk Velvet Bookmark Ribbon -->
+        <div class="book-ribbon-bookmark" aria-hidden="true">
+          <div class="ribbon-tail"></div>
         </div>
 
-        <p id="grimoire-desc" class="grimoire-lore-text" style="font-style: italic; color: #ffde94;"></p>
-        <p id="grimoire-lore" class="grimoire-lore-text"></p>
+        <!-- Antique Brass Corner Filigree Guards -->
+        <div class="book-corner corner-tl" aria-hidden="true"></div>
+        <div class="book-corner corner-tr" aria-hidden="true"></div>
+        <div class="book-corner corner-bl" aria-hidden="true"></div>
+        <div class="book-corner corner-br" aria-hidden="true"></div>
 
-        <div class="grimoire-gallery-title">Historical Archive & Castle Gallery</div>
-        <div id="grimoire-gallery" class="grimoire-gallery-grid"></div>
+        <!-- Open Folio Page Content Wrapper -->
+        <div class="grimoire-page-scroll">
+          <div class="grimoire-top-bar">
+            <div class="grimoire-folio-header">
+              <span class="folio-tome-mark">❧ CODEX OCCULTA ☙</span>
+              <span id="grimoire-folio-num" class="folio-page-num">FOLIO I</span>
+            </div>
+            <button id="grimoire-close-btn" class="grimoire-close-btn" title="Close Tome & Return to Map">✕ Close Tome</button>
+          </div>
+
+          <div class="grimoire-header">
+            <div class="grimoire-rubric-label">HISTORIC CARTOGRAPHIC RECORD</div>
+            <h3 id="grimoire-title">1. The Dullahan</h3>
+            <div id="grimoire-location" class="grimoire-subtitle">Dublin, Ireland</div>
+            <div class="grimoire-divider">
+              <span class="divider-line"></span>
+              <span class="divider-gem">❖ ✦ ❖</span>
+              <span class="divider-line"></span>
+            </div>
+          </div>
+
+          <!-- Mounted Bookplate Engraving Plate -->
+          <div class="grimoire-bookplate-frame">
+            <div class="bookplate-corner-clip clip-tl"></div>
+            <div class="bookplate-corner-clip clip-tr"></div>
+            <div class="bookplate-corner-clip clip-bl"></div>
+            <div class="bookplate-corner-clip clip-br"></div>
+            <div class="grimoire-hero-image">
+              <img id="grimoire-hero-img" src="" alt="Folklore illustration" title="Click to inspect archival plate in high resolution">
+            </div>
+            <div class="bookplate-caption">FIG. I — AUTHENTIC PERIOD WOODCUT & FOLKLORE PLATE</div>
+          </div>
+
+          <!-- Field Inscription / Marginalia Callout -->
+          <div class="grimoire-marginalia">
+            <div class="marginalia-tag">SCHOLAR'S EXPEDITION NOTE</div>
+            <p id="grimoire-desc" class="grimoire-desc-text"></p>
+          </div>
+
+          <!-- Extended Illuminated Lore Text -->
+          <div class="grimoire-text-body">
+            <p id="grimoire-lore" class="grimoire-lore-text"></p>
+          </div>
+
+          <!-- Archival Plates / Specimen Gallery -->
+          <div class="grimoire-gallery-section">
+            <div class="grimoire-gallery-heading">
+              <span class="gallery-flourish">❦</span>
+              <span>ARCHIVAL FOLIO PLATES & SKETCHES</span>
+              <span class="gallery-flourish">❦</span>
+            </div>
+            <div id="grimoire-gallery" class="grimoire-gallery-grid"></div>
+          </div>
+
+          <!-- Book Colophon Seal -->
+          <div class="grimoire-colophon">
+            <div class="colophon-seal">✦ EX LIBRIS MAPTIME ✦</div>
+            <div class="colophon-sub">An authentic compendium of world folklore & geographical curiosities</div>
+          </div>
+        </div>
       </aside>
 
       <!-- Lightbox Modal for Full-Resolution Image Viewing -->

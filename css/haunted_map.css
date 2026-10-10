@@ -31,6 +31,13 @@
   font-style: normal;
 }
 
+@font-face {
+  font-family: 'Jenson1470';
+  src: url('../fonts/1470_Jenson.TTF') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
 :root {
   --bg-ocean: #222327;
   --bg-land: #3f3f41;
@@ -989,60 +996,307 @@ html, body {
   display: inline;
 }
 
-/* Side Grimoire Drawer for Lore & Expanded Gallery */
+/* =========================================================
+   GOTHIC LEATHER-BOUND GRIMOIRE BOOK DRAWER
+   ========================================================= */
 .grimoire-drawer {
   position: absolute;
   top: 54px;
-  right: -420px;
-  width: 400px;
+  right: -500px;
+  width: 460px;
   height: calc(100% - 54px);
-  background: rgba(18, 18, 22, 0.96);
-  border-left: 1.5px solid rgba(240, 192, 90, 0.35);
-  box-shadow: -10px 0 35px rgba(0, 0, 0, 0.8);
+  background: #140d0c;
+  border-left: 6px solid #3c1e14;
+  box-shadow: -22px 0 50px rgba(0, 0, 0, 0.95), inset 6px 0 15px rgba(0, 0, 0, 0.8);
+  border-radius: 4px 0 0 4px;
   z-index: 120;
-  padding: 24px;
   display: flex;
-  flex-direction: column;
-  gap: 16px;
-  overflow-y: auto;
-  backdrop-filter: blur(12px);
-  transition: right 0.35s cubic-bezier(0.2, 0.9, 0.2, 1);
+  overflow: hidden;
+  transition: right 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.05);
 }
 
 .grimoire-drawer.open {
   right: 0;
 }
 
+/* 3D Book Spine Gutter on the Left */
+.book-spine-gutter {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 34px;
+  background: linear-gradient(to right, #090505 0%, #1c0e0b 28%, #2e1712 55%, #180b09 80%, #0c0505 100%);
+  border-right: 2px solid #5a381e;
+  box-shadow: inset -6px 0 12px rgba(0, 0, 0, 0.85), inset 2px 0 4px rgba(255, 215, 0, 0.15);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px 0;
+  pointer-events: none;
+}
+
+.spine-rib {
+  width: 28px;
+  height: 9px;
+  background: linear-gradient(180deg, #5c381c, #2a150b);
+  border-radius: 2px;
+  box-shadow: 0 3px 5px rgba(0, 0, 0, 0.9), inset 0 1px 1px rgba(240, 192, 90, 0.4);
+}
+
+.spine-gold-emboss {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-family: 'Fraunces', serif;
+  font-size: 10px;
+  letter-spacing: 4px;
+  color: rgba(240, 192, 90, 0.55);
+  text-shadow: 0 0 4px rgba(0, 0, 0, 0.9);
+  margin: auto;
+  user-select: none;
+}
+
+/* Crimson Silk Bookmark Ribbon - Anchored to Spine Gutter */
+.book-ribbon-bookmark {
+  position: absolute;
+  top: 0;
+  left: 28px;
+  width: 18px;
+  height: 80px;
+  z-index: 10;
+  pointer-events: none;
+  background: linear-gradient(to right, #6b1212, #a81c1c 48%, #751414);
+  box-shadow: 3px 6px 14px rgba(0, 0, 0, 0.85);
+  border-bottom: 2.5px solid #d4af37;
+}
+
+.ribbon-tail {
+  width: 100%;
+  height: 100%;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 84%, 0 100%);
+}
+
+/* Antique Brass Corner Guards */
+.book-corner {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  z-index: 15;
+  pointer-events: none;
+}
+
+.book-corner.corner-tl {
+  top: 6px;
+  left: 40px;
+  border-top: 3px double #d4af37;
+  border-left: 3px double #d4af37;
+}
+
+.book-corner.corner-tr {
+  top: 6px;
+  right: 6px;
+  border-top: 3px double #d4af37;
+  border-right: 3px double #d4af37;
+}
+
+.book-corner.corner-bl {
+  bottom: 6px;
+  left: 40px;
+  border-bottom: 3px double #d4af37;
+  border-left: 3px double #d4af37;
+}
+
+.book-corner.corner-br {
+  bottom: 6px;
+  right: 6px;
+  border-bottom: 3px double #d4af37;
+  border-right: 3px double #d4af37;
+}
+
+/* Scrollable Folio Page Content */
+.grimoire-page-scroll {
+  margin-left: 34px;
+  width: calc(100% - 34px);
+  height: 100%;
+  overflow-y: auto;
+  padding: 22px 26px 45px 24px;
+  background: radial-gradient(ellipse at 50% 10%, #201713 0%, #181210 55%, #110d0c 100%);
+  box-shadow: inset 18px 0 24px -6px rgba(0, 0, 0, 0.85), inset -8px 0 16px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.grimoire-page-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.grimoire-page-scroll::-webkit-scrollbar-track {
+  background: #110d0c;
+}
+
+.grimoire-page-scroll::-webkit-scrollbar-thumb {
+  background: #5a3e20;
+  border-radius: 3px;
+}
+
+.grimoire-page-scroll::-webkit-scrollbar-thumb:hover {
+  background: #7a542b;
+}
+
+/* Header & Clasp Close Button */
+.grimoire-top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(240, 192, 90, 0.25);
+  padding-bottom: 10px;
+  margin-bottom: 2px;
+  position: relative;
+  z-index: 30;
+}
+
+.grimoire-folio-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.folio-tome-mark {
+  font-family: 'Fraunces', serif;
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  color: #a48248;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.folio-page-num {
+  font-family: 'Fraunces', 'Jenson1470', serif;
+  font-size: 11.5px;
+  color: #f0c05a;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
 .grimoire-close-btn {
-  align-self: flex-end;
-  background: transparent;
-  border: none;
-  color: #adadad;
-  font-size: 22px;
+  background: linear-gradient(135deg, #2c1d14, #180f0a);
+  border: 1px solid #7c5828;
+  border-radius: 3px;
+  color: #eed59b;
+  font-family: 'Fraunces', serif;
+  font-size: 11.5px;
+  padding: 4px 10px;
   cursor: pointer;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.7);
+  transition: all 0.2s ease;
 }
 
 .grimoire-close-btn:hover {
-  color: #ffd700;
+  background: linear-gradient(135deg, #3d2b1a, #24160d);
+  border-color: #ffd700;
+  color: #ffffff;
+  box-shadow: 0 0 10px rgba(240, 192, 90, 0.4);
+}
+
+.grimoire-rubric-label {
+  font-family: 'Fraunces', serif;
+  font-size: 9.5px;
+  letter-spacing: 2.5px;
+  color: #b83232;
+  font-weight: 700;
+  text-transform: uppercase;
 }
 
 .grimoire-header h3 {
   font-family: 'Fraunces', serif;
-  font-size: 24px;
-  color: var(--gold-title);
-  margin-bottom: 4px;
+  font-size: 26px;
+  color: #ffe49e;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8), 0 0 10px rgba(240, 192, 90, 0.25);
+  margin: 3px 0 2px 0;
+  line-height: 1.15;
 }
 
 .grimoire-subtitle {
+  font-family: 'Jenson1470', 'Fraunces', Georgia, serif;
+  font-size: 13.5px;
+  font-style: italic;
   color: #c5a059;
-  font-size: 13px;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
+}
+
+.grimoire-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.grimoire-divider .divider-line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(240, 192, 90, 0.35), transparent);
+}
+
+.grimoire-divider .divider-gem {
+  font-size: 9px;
+  color: #d4af37;
+  letter-spacing: 2px;
+}
+
+/* Mounted Bookplate Engraving Plate */
+.grimoire-bookplate-frame {
+  background: #100b09;
+  border: 2px solid #5a3c22;
+  padding: 7px;
+  border-radius: 4px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.8), inset 0 0 12px rgba(0, 0, 0, 0.7);
+  position: relative;
+}
+
+.bookplate-corner-clip {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  pointer-events: none;
+}
+
+.bookplate-corner-clip.clip-tl {
+  top: 3px;
+  left: 3px;
+  border-top: 2px solid #d4af37;
+  border-left: 2px solid #d4af37;
+}
+
+.bookplate-corner-clip.clip-tr {
+  top: 3px;
+  right: 3px;
+  border-top: 2px solid #d4af37;
+  border-right: 2px solid #d4af37;
+}
+
+.bookplate-corner-clip.clip-bl {
+  bottom: 3px;
+  left: 3px;
+  border-bottom: 2px solid #d4af37;
+  border-left: 2px solid #d4af37;
+}
+
+.bookplate-corner-clip.clip-br {
+  bottom: 3px;
+  right: 3px;
+  border-bottom: 2px solid #d4af37;
+  border-right: 2px solid #d4af37;
 }
 
 .grimoire-hero-image {
   width: 100%;
-  height: 220px;
-  border-radius: 6px;
+  height: 215px;
+  border-radius: 2px;
   overflow: hidden;
   border: 1px solid rgba(240, 192, 90, 0.4);
   cursor: pointer;
@@ -1053,25 +1307,97 @@ html, body {
   height: 100%;
   object-fit: cover;
   display: block;
-  transition: transform 0.3s ease;
+  transition: transform 0.35s ease;
 }
 
 .grimoire-hero-image:hover img {
   transform: scale(1.04);
 }
 
-.grimoire-lore-text {
-  font-size: 13px;
-  line-height: 1.6;
-  color: #d8d8de;
+.bookplate-caption {
+  font-family: 'Jenson1470', 'Fraunces', serif;
+  font-size: 10px;
+  text-align: center;
+  color: #8e7751;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin-top: 6px;
 }
 
-.grimoire-gallery-title {
-  font-size: 12px;
+/* Scholar's Marginalia Note */
+.grimoire-marginalia {
+  background: rgba(36, 24, 18, 0.7);
+  border-left: 3px solid #b83232;
+  border-radius: 0 4px 4px 0;
+  padding: 10px 14px;
+  margin-top: 4px;
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
+}
+
+.marginalia-tag {
+  font-size: 8.5px;
+  letter-spacing: 1.5px;
+  color: #c59344;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 1px;
-  color: #a8946e;
-  margin-top: 8px;
+  margin-bottom: 3px;
+}
+
+.grimoire-desc-text {
+  font-family: 'Jenson1470', Georgia, serif;
+  font-size: 14px;
+  font-style: italic;
+  line-height: 1.55;
+  color: #ffde94;
+}
+
+/* Extended Illuminated Text */
+.grimoire-text-body {
+  margin-top: 4px;
+}
+
+.grimoire-lore-text {
+  font-family: 'Jenson1470', 'Fraunces', Georgia, serif;
+  font-size: 14.5px;
+  line-height: 1.75;
+  color: #e4d7bf;
+  text-align: justify;
+}
+
+.grimoire-lore-text::first-letter {
+  float: left;
+  font-family: 'Fraunces', serif;
+  font-size: 3.3em;
+  line-height: 0.85;
+  margin: 4px 10px 0 0;
+  color: #ffd700;
+  text-shadow: 0 0 10px rgba(240, 192, 90, 0.5), 2px 2px 0 #281406;
+  font-weight: 800;
+  padding: 4px 8px;
+  background: linear-gradient(135deg, #441c0e, #220d07);
+  border: 1.5px solid #a87930;
+  border-radius: 4px;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.6);
+}
+
+/* Archival Plates Gallery */
+.grimoire-gallery-section {
+  border-top: 1px dashed rgba(240, 192, 90, 0.25);
+  padding-top: 14px;
+  margin-top: 6px;
+}
+
+.grimoire-gallery-heading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: 'Fraunces', serif;
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  color: #b89a64;
+  text-transform: uppercase;
+  margin-bottom: 10px;
 }
 
 .grimoire-gallery-grid {
@@ -1082,17 +1408,19 @@ html, body {
 
 .gallery-thumb {
   width: 100%;
-  height: 70px;
-  border-radius: 4px;
+  height: 72px;
+  border-radius: 3px;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1.5px solid #4a341e;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.7);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.25s ease;
 }
 
 .gallery-thumb:hover {
   border-color: #ffd700;
   transform: scale(1.06);
+  box-shadow: 0 0 12px rgba(240, 192, 90, 0.4);
 }
 
 .gallery-thumb img {
@@ -1100,6 +1428,30 @@ html, body {
   height: 100%;
   object-fit: cover;
   display: block;
+}
+
+/* Colophon Seal */
+.grimoire-colophon {
+  border-top: 1px solid rgba(240, 192, 90, 0.15);
+  padding-top: 14px;
+  text-align: center;
+  margin-top: 8px;
+}
+
+.colophon-seal {
+  font-family: 'Fraunces', serif;
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: #9c7b46;
+  text-transform: uppercase;
+}
+
+.colophon-sub {
+  font-family: 'Jenson1470', serif;
+  font-size: 11px;
+  font-style: italic;
+  color: #6b5635;
+  margin-top: 3px;
 }
 
 /* Lightbox Modal */

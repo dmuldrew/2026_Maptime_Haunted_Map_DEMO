@@ -120,6 +120,12 @@ class SpookyNarrator {
     this.activeStopNumber = item.number;
     this.onFinishCallback = onFinish;
 
+    const playBtn = document.getElementById('tour-play-btn');
+    if (playBtn) {
+      playBtn.innerHTML = '❚❚';
+      playBtn.title = 'Pause narration or tour';
+    }
+
     // Start background spooky audio drone in Web Audio
     if (window.hauntedAudio) {
       window.hauntedAudio.startNarrationBed();
@@ -396,6 +402,14 @@ class SpookyNarrator {
       }
     }, 2200);
 
+    if (!window.tourActive && !window.tourPausedForSpeech) {
+      const playBtn = document.getElementById('tour-play-btn');
+      if (playBtn) {
+        playBtn.innerHTML = '▶';
+        playBtn.title = 'Play animated journey along route';
+      }
+    }
+
     const cb = this.onFinishCallback;
     this.onFinishCallback = null;
     if (cb) cb();
@@ -425,6 +439,14 @@ class SpookyNarrator {
 
     this.updateNarrationBanner(null, false);
     this.onFinishCallback = null;
+
+    if (!window.tourActive && !window.tourPausedForSpeech) {
+      const playBtn = document.getElementById('tour-play-btn');
+      if (playBtn) {
+        playBtn.innerHTML = '▶';
+        playBtn.title = 'Play animated journey along route';
+      }
+    }
   }
 }
 

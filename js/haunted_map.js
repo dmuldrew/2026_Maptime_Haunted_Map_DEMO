@@ -422,8 +422,16 @@ function openGrimoire(item) {
   const drawer = document.getElementById('grimoire-drawer');
   if (!drawer) return;
 
-  document.getElementById('grimoire-title').textContent = item.title;
-  document.getElementById('grimoire-location').textContent = `${item.location} • Stop #${item.number}`;
+  const romanNumerals = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII', 'XIII', 'XIV', 'XV'];
+  const romanNum = romanNumerals[item.number - 1] || `${item.number}`;
+  const folioNum = document.getElementById('grimoire-folio-num');
+  if (folioNum) {
+    folioNum.textContent = `FOLIO ${romanNum}`;
+  }
+
+  const cleanTitle = (item.title || '').replace(/^\d+[\.\s\-]+/, '');
+  document.getElementById('grimoire-title').textContent = `${item.number}. ${cleanTitle}`;
+  document.getElementById('grimoire-location').textContent = `${item.location} • Chronicle No. ${item.number}`;
   
   const heroImg = document.getElementById('grimoire-hero-img');
   heroImg.src = item.image;
@@ -667,7 +675,8 @@ function initTour(data) {
   phantomMarker = L.marker(routeCoords[0], { icon: spectralIcon, zIndexOffset: 1200 }).addTo(map);
 
   playBtn.addEventListener('click', () => {
-    if (tourActive) {
+    const isSpeaking = window.spookyNarrator && window.spookyNarrator.isSpeaking;
+    if (tourActive || tourPausedForSpeech || isSpeaking) {
       pauseTour(true);
     } else {
       startTour();
@@ -683,9 +692,19 @@ function initTour(data) {
   });
 
   const voiceBtn = document.getElementById('tour-voice-btn');
-  if (voiceBtn) {
+  if (voiceBtn && window.spookyNarrator) {
+    const savedVoice = localStorage.getItem('haunted_voice_enabled');
+    if (savedVoice !== null) {
+      window.spookyNarrator.enabled = savedVoice === '1';
+    }
+    const isVoiceOn = window.spookyNarrator.enabled;
+    voiceBtn.classList.toggle('active', isVoiceOn);
+    voiceBtn.classList.toggle('muted', !isVoiceOn);
+    voiceBtn.title = `Toggle Spooky Voice (Currently: ${isVoiceOn ? 'ON' : 'OFF'})`;
+
     voiceBtn.addEventListener('click', () => {
       const isEnabled = window.spookyNarrator.toggleEnabled();
+      localStorage.setItem('haunted_voice_enabled', isEnabled ? '1' : '0');
       if (isEnabled) {
         voiceBtn.classList.add('active');
         voiceBtn.classList.remove('muted');
@@ -694,6 +713,15 @@ function initTour(data) {
         voiceBtn.classList.remove('active');
         voiceBtn.classList.add('muted');
         voiceBtn.title = 'Toggle Spooky Voice (Currently: OFF)';
+        if (tourPausedForSpeech) {
+          tourPausedForSpeech = false;
+          window.tourPausedForSpeech = false;
+          if (speechResumeTimeout) {
+            clearTimeout(speechResumeTimeout);
+            speechResumeTimeout = null;
+          }
+          startTour();
+        }
       }
     });
   }
@@ -708,14 +736,28 @@ function initTour(data) {
   const stopNarrationBtn = document.getElementById('narration-stop-btn');
   if (stopNarrationBtn) {
     stopNarrationBtn.addEventListener('click', () => {
+      if (speechResumeTimeout) {
+        clearTimeout(speechResumeTimeout);
+        speechResumeTimeout = null;
+      }
       tourPausedForSpeech = false;
+      window.tourPausedForSpeech = false;
       window.spookyNarrator.stop();
+      if (!tourActive) {
+        const playBtn = document.getElementById('tour-play-btn');
+        if (playBtn) playBtn.innerHTML = '▶';
+      }
     });
   }
 
   progressContainer.addEventListener('click', (e) => {
+    if (speechResumeTimeout) {
+      clearTimeout(speechResumeTimeout);
+      speechResumeTimeout = null;
+    }
     if (window.spookyNarrator) window.spookyNarrator.stop();
     tourPausedForSpeech = false;
+    window.tourPausedForSpeech = false;
     const rect = progressContainer.getBoundingClientRect();
     const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
     currentTourDistance = ratio * totalRouteDistance;
@@ -727,14 +769,21 @@ function initTour(data) {
 }
 
 let tourPausedForSpeech = false;
+let speechResumeTimeout = null;
+window.tourActive = false;
+window.tourPausedForSpeech = false;
 
 function startTour() {
-  tourActive = true;
-  tourPausedForSpeech = false;
-  document.getElementById('tour-play-btn').innerHTML = '❚❚';
-  if (window.hauntedAudio && window.hauntedAudio.isMuted) {
-    window.hauntedAudio.toggleSound();
+  if (speechResumeTimeout) {
+    clearTimeout(speechResumeTimeout);
+    speechResumeTimeout = null;
   }
+  tourActive = true;
+  window.tourActive = true;
+  tourPausedForSpeech = false;
+  window.tourPausedForSpeech = false;
+  const playBtn = document.getElementById('tour-play-btn');
+  if (playBtn) playBtn.innerHTML = '❚❚';
 
   // If already at end, wrap to start
   if (currentTourDistance >= totalRouteDistance - 1000) {
@@ -772,11 +821,23 @@ function startTour() {
 
 function pauseTour(userInitiated = true) {
   tourActive = false;
-  document.getElementById('tour-play-btn').innerHTML = '▶';
-  if (tourTimer) cancelAnimationFrame(tourTimer);
+  window.tourActive = false;
+  if (tourTimer) {
+    cancelAnimationFrame(tourTimer);
+    tourTimer = null;
+  }
   lastFrameTimestamp = null;
+
+  if (speechResumeTimeout) {
+    clearTimeout(speechResumeTimeout);
+    speechResumeTimeout = null;
+  }
+
   if (userInitiated) {
     tourPausedForSpeech = false;
+    window.tourPausedForSpeech = false;
+    const playBtn = document.getElementById('tour-play-btn');
+    if (playBtn) playBtn.innerHTML = '▶';
     if (window.spookyNarrator) {
       window.spookyNarrator.stop();
     }
@@ -844,14 +905,17 @@ function checkStopArrival() {
         const wasAutoTouring = tourActive;
         if (wasAutoTouring) {
           tourPausedForSpeech = true;
+          window.tourPausedForSpeech = true;
           pauseTour(false /* paused for speech, keep speech alive */);
         }
 
         window.spookyNarrator.readStop(sd.stop, () => {
           if (tourPausedForSpeech) {
             tourPausedForSpeech = false;
+            window.tourPausedForSpeech = false;
             // Short eerie pause before continuing along the road
-            setTimeout(() => {
+            speechResumeTimeout = setTimeout(() => {
+              speechResumeTimeout = null;
               if (!tourActive && !tourPausedForSpeech) {
                 startTour();
               }
@@ -865,8 +929,17 @@ function checkStopArrival() {
 }
 
 function stepTour(direction) {
+  if (speechResumeTimeout) {
+    clearTimeout(speechResumeTimeout);
+    speechResumeTimeout = null;
+  }
   if (window.spookyNarrator) window.spookyNarrator.stop();
   tourPausedForSpeech = false;
+  window.tourPausedForSpeech = false;
+  if (!tourActive) {
+    const playBtn = document.getElementById('tour-play-btn');
+    if (playBtn) playBtn.innerHTML = '▶';
+  }
 
   currentStopIndex += direction;
   if (currentStopIndex < 0) currentStopIndex = stopDistances.length - 1;
@@ -974,13 +1047,24 @@ function initUIEvents(data) {
 
   // Audio Toggle
   const audioBtn = document.getElementById('audio-toggle-btn');
-  audioBtn.addEventListener('click', () => {
+  if (audioBtn) {
+    const savedAudioMuted = localStorage.getItem('haunted_audio_muted');
+    const isMuted = savedAudioMuted === null ? true : savedAudioMuted === '1';
     if (window.hauntedAudio) {
-      const isSounding = window.hauntedAudio.toggleSound();
-      audioBtn.classList.toggle('active', isSounding);
-      audioBtn.innerHTML = isSounding ? '🔔 Audio: On' : '🔕 Audio: Off';
+      window.hauntedAudio.isMuted = isMuted;
     }
-  });
+    audioBtn.classList.toggle('active', !isMuted);
+    audioBtn.innerHTML = !isMuted ? '🔔 Audio: On' : '🔕 Audio: Off';
+
+    audioBtn.addEventListener('click', () => {
+      if (window.hauntedAudio) {
+        const isSounding = window.hauntedAudio.toggleSound();
+        audioBtn.classList.toggle('active', isSounding);
+        audioBtn.innerHTML = isSounding ? '🔔 Audio: On' : '🔕 Audio: Off';
+        localStorage.setItem('haunted_audio_muted', isSounding ? '0' : '1');
+      }
+    });
+  }
 
   // Reset Cards Button
   document.getElementById('reset-cards-btn').addEventListener('click', () => {
@@ -1046,5 +1130,12 @@ function initUIEvents(data) {
   document.getElementById('lightbox-close-btn').addEventListener('click', closeLightbox);
   document.getElementById('lightbox-modal').addEventListener('click', (e) => {
     if (e.target === e.currentTarget) closeLightbox();
+  });
+
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      closeLightbox();
+      closeGrimoire();
+    }
   });
 }
