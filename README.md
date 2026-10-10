@@ -26,10 +26,18 @@ The workshop guided participants through hands-on thematic cartography, explorin
 
 ## ✨ Features
 
-- **Classic Poster & Edge-to-Edge Explorer Modes**: Seamlessly toggle between the authentic Victorian poster layout and an interactive exploration map.
-- **Narrated Tour & Eerie Voiceover**: Animated route with synchronized text highlighting and customizable spooky voice synthesis.
-- **Atmospheric Gothic Soundscape**: Procedurally generated ambient drone, binaural pulsations, and vintage thunder crackles via the Web Audio API.
-- **Interactive Lore Cards**: Draggable folklore cards with high-fidelity vintage illustrations, legends, and location pinpoints.
+- **Multi-Edition Gothic Poster Collection**:
+  - 🏰 **Edition 1: European Gothic Folklore** — The classic European origins behind familiar Halloween costumes (Dullahan, Warwick Ghost, Trier Witches, Frankenstein, Werewolves of Valais, Krampus, Vlad Dracula).
+  - 🌲 **Edition 2: North American Cryptids & Legends** — Indigenous spirits, Appalachian phantoms, and New World beasts (Bigfoot / Sasquatch, The Wendigo, The Flatwoods Monster, The Mothman, The Jersey Devil, El Chupacabra, El Silbón).
+  - 🐉 **Edition 3: Old World Bestiary (Asia, Africa & Oceania)** — Ancient mythic creatures and primeval beasts (The Loch Ness Monster, Mokele-Mbembe, Popobawa, The Yeti, The Jiangshi, The Kappa, The Bunyip).
+  - 🌐 **Edition 4: The Haunted World (Grand Worldwide Odyssey)** — An epic globe-spanning expedition connecting 14 legendary cryptids across six continents along an unbroken circumglobal spectral path.
+- **Extended Global Cartography & Graticules**: Full planetary coverage across 258 countries rendered in the signature gothic dark palette (`#3f3f41` land, `#222327` sea) with global graticule grid lines.
+- **Extended Ectoplasmic Paths & Continuous Journeys**: High-density glowing 4-layer spectral routes connecting stops on every continent with real-time distance interpolation and heading tracking.
+- **Period-Accurate 19th-Century Woodcut Engravings**: High-resolution vintage Victorian bestiary plates and historical portraits for every cryptid stop.
+- **Classic Poster & Edge-to-Edge Explorer Modes**: Seamlessly toggle between authentic Victorian poster layouts and interactive edge-to-edge exploration.
+- **Narrated Tour & Spooky Voiceover**: Animated phantom marker with synchronized word-by-word text highlighting and customizable speech synthesis.
+- **Atmospheric Gothic Soundscape**: Procedurally synthesized dark ambient drone, binaural pulsations, and church bell tolls via Web Audio.
+- **Interactive Grimoire & Draggable Lore Cards**: Freely draggable cards with glowing phantom tethers, deep mythological archives, and lightbox galleries.
 
 ---
 

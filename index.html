@@ -17,7 +17,24 @@
     <header class="top-bar">
       <div class="brand-area">
         <span class="brand-title">The Haunted Map</span>
-        <span class="brand-subtitle">The European Folklore Behind Familiar Halloween Costumes</span>
+        <span class="brand-subtitle" id="header-brand-subtitle">The European Folklore Behind Familiar Halloween Costumes</span>
+      </div>
+
+      <!-- Poster Edition Selector -->
+      <div class="edition-nav-area">
+        <label for="edition-select" class="edition-label">Poster Edition:</label>
+        <div class="edition-pill-group" id="edition-pill-group">
+          <button class="edition-pill active" data-edition="europe" title="European Folklore Behind Familiar Halloween Costumes">🏰 Europe</button>
+          <button class="edition-pill" data-edition="americas" title="North American Cryptids, Urban Legends & Spirits">🌲 Americas</button>
+          <button class="edition-pill" data-edition="oldworld" title="Old World Bestiary: Asia, Africa & Oceania">🐉 Old World</button>
+          <button class="edition-pill" data-edition="world" title="The Haunted World: Global Cryptid Odyssey">🌐 World Tour</button>
+        </div>
+        <select id="edition-select" class="edition-select-mobile" title="Choose Haunted Poster Map Edition">
+          <option value="europe" selected>🏰 European Folklore (Classic 7)</option>
+          <option value="americas">🌲 North American Cryptids</option>
+          <option value="oldworld">🐉 Old World Bestiary (Asia, Africa, Oceania)</option>
+          <option value="world">🌐 The Haunted World (Global Tour)</option>
+        </select>
       </div>
 
       <div class="top-controls">
@@ -27,7 +44,7 @@
         </div>
         <button id="audio-toggle-btn" class="btn" title="Toggle eerie Web Audio gothic atmospheric soundscape">🔕 Audio: Off</button>
         <button id="reset-cards-btn" class="btn" title="Reset all dragged cards back to their initial poster positions">✥ Reset Cards</button>
-        <button id="reset-view-btn" class="btn" title="Reset map to full Europe framing">↺ Reset Framing</button>
+        <button id="reset-view-btn" class="btn" title="Reset map to current poster framing">↺ Reset Framing</button>
       </div>
     </header>
 
@@ -44,24 +61,24 @@
         <div class="poster-stage">
           <!-- Title & Subtitle in Poster -->
           <div class="poster-header">
-            <h1>The Haunted Map</h1>
-            <h2>The European Folklore Behind Familiar Halloween Costumes</h2>
+            <h1 id="poster-title">The Haunted Map</h1>
+            <h2 id="poster-subtitle">The European Folklore Behind Familiar Halloween Costumes</h2>
           </div>
 
           <!-- Samhain History Narrative Box (Top Right) -->
           <div id="poster-article-box" class="poster-article">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-              <span style="font-family: 'Fraunces', serif; font-size: 13px; color: #ffd8a8; font-weight: 600;">Folklore Heritage</span>
+              <span id="poster-article-badge" style="font-family: 'Fraunces', serif; font-size: 13px; color: #ffd8a8; font-weight: 600;">Folklore Heritage</span>
               <button id="article-toggle-btn" style="background: transparent; border: none; color: #cfcfd2; font-size: 14px; cursor: pointer; padding: 0 4px;" title="Minimize / Expand">─</button>
             </div>
             <div id="poster-article-content">
-              <p>
+              <p id="poster-article-p1">
                 The tradition of Halloween costumes dates back over 2,000 years to the ancient Celtic festival of Samhain, celebrated in parts of what are now Ireland, Scotland, and Britain. Samhain marked the end of the harvest and the beginning of winter, a season associated with death and darkness. Celts believed that on the night of October 31, the veil between the living and the dead thinned, allowing spirits to roam the earth. To protect themselves or confuse these souls, people wore disguises made from animal skins and heads, blending in with the supernatural or attempting to ward them off.
               </p>
-              <p>
+              <p id="poster-article-p2">
                 As Christianity spread through Europe, many pagan customs merged with Christian holidays. Samhain became linked to All Hallows’ Eve, the night before All Saints’ Day. In the Middle Ages, people practiced “souling,” where the poor went door to door offering prayers for the dead in exchange for food. Participants often wore masks or costumes, both as a spiritual gesture and as a way to hide from evil spirits. These early disguises helped shape the beginnings of Halloween costume traditions as we know them today.
               </p>
-              <div class="citation">
+              <div id="poster-article-citation" class="citation">
                 Excerpted from Dressed to Disturb: A Haunted History of Halloween Costumes, by Ashley Chan
               </div>
             </div>
@@ -71,14 +88,14 @@
           <div id="poster-cards-container"></div>
 
           <!-- Bottom Left Inset Box: World Mini-Map, Compass Rose, Scale Bar -->
-          <div class="poster-inset-box">
-            <div class="inset-map-frame">
+          <div class="poster-inset-box" id="poster-inset-box">
+            <div class="inset-map-frame" id="inset-map-frame" title="Minimap Navigator: Click to pan • Drag golden viewport box • Double-click to reset framing">
               <canvas id="inset-map-canvas"></canvas>
             </div>
             
             <div class="inset-legend">
               <!-- Vintage 8-point Compass Rose SVG -->
-              <svg class="compass-rose" viewBox="0 0 100 100">
+              <svg class="compass-rose" id="compass-rose" viewBox="0 0 100 100" role="button" tabindex="0" title="Compass: North • Click to reset European framing">
                 <!-- North Letter -->
                 <text x="50" y="14" fill="#cfcfd4" font-family="'Fraunces', serif" font-size="13" font-weight="bold" text-anchor="middle">N</text>
                 <!-- Compass Points -->
@@ -104,11 +121,11 @@
               </svg>
 
               <!-- Scale Bar -->
-              <div class="scalebar-custom">
+              <div class="scalebar-custom" id="scalebar-custom" role="button" tabindex="0" title="Scale Bar: Click to toggle Miles (mi) / Kilometers (km)">
                 <div class="scalebar-ticks">
-                  <span>0</span>
-                  <span>100</span>
-                  <span>200 mi</span>
+                  <span id="scale-tick-0">0</span>
+                  <span id="scale-tick-mid">100</span>
+                  <span id="scale-tick-end">200 mi</span>
                 </div>
                 <div class="scalebar-line"></div>
               </div>

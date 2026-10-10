@@ -1,6 +1,6 @@
 // =========================================================
 // THE HAUNTED MAP - INTERACTIVE WEB MAP APPLICATION
-// Draggable, map-anchored story cards & cartographic tour
+// Multi-Edition Gothic Cartography, Global Cryptids & Tour
 // =========================================================
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -15,6 +15,11 @@ let routeLayers = [];
 let graticuleLayer = null;
 let countriesLayer = null;
 let phantomMarker = null;
+let countryLabelMarkers = [];
+
+// Active Edition & Poster State
+let currentEdition = 'europe';
+let currentPoster = null;
 
 // Tour state
 let tourActive = false;
@@ -29,16 +34,27 @@ function initApp() {
   }
 
   initMap(data);
-  buildDraggableCardMarkers(data);
-  buildCountryLabels(data.countryLabels);
-  drawInsetMinimap(data.world);
+  initMapNavigationPanel(data.world);
   initFogMist();
-  initUIEvents(data);
   initTour(data);
+  initUIEvents(data);
+
+  // Restore saved edition or default to Europe
+  let savedEdition = 'europe';
+  try {
+    savedEdition = localStorage.getItem('haunted_map_active_edition') || 'europe';
+  } catch (e) {
+    savedEdition = 'europe';
+  }
+  if (!data.posters || !data.posters[savedEdition]) {
+    savedEdition = 'europe';
+  }
+
+  switchEdition(savedEdition, false);
 }
 
 // ---------------------------------------------------------
-// 1. MAP INITIALIZATION (LEAFLET)
+// 1. MAP INITIALIZATION (LEAFLET - GLOBAL EXTENSION)
 // ---------------------------------------------------------
 function initMap(data) {
   const initialCenter = [50.8, 7.8];
@@ -49,19 +65,21 @@ function initMap(data) {
     zoom: initialZoom,
     zoomSnap: 0,
     zoomDelta: 0.25,
-    minZoom: 3.5,
+    minZoom: 1.8,
     maxZoom: 10,
     zoomControl: false,
     attributionControl: false,
-    inertia: true
+    inertia: true,
+    worldCopyJump: true
   });
 
   // Top-right zoom controls in explorer mode
   L.control.zoom({ position: 'topright' }).addTo(map);
 
-  // 1. European countries polygon layer
-  if (data.europe) {
-    countriesLayer = L.geoJSON(data.europe, {
+  // 1. World countries polygon layer (covers all 258 countries across the globe in gothic theme)
+  const worldGeo = data.world || data.europe;
+  if (worldGeo) {
+    countriesLayer = L.geoJSON(worldGeo, {
       style: {
         fillColor: '#3f3f41',
         fillOpacity: 1.0,
@@ -72,7 +90,7 @@ function initMap(data) {
     }).addTo(map);
   }
 
-  // 2. Graticule 5-degree grid lines
+  // 2. Graticule grid lines (spans the entire globe)
   if (data.graticules) {
     graticuleLayer = L.geoJSON(data.graticules, {
       style: {
@@ -83,57 +101,164 @@ function initMap(data) {
       }
     }).addTo(map);
   }
+}
 
-  // 3. Spooky Haunted Route Line (15,000 points)
-  if (data.route && data.route.features && data.route.features.length > 0) {
-    const rawCoords = data.route.features[0].geometry.coordinates;
-    routeCoords = rawCoords.map(c => [c[1], c[0]]);
+// Reset view to active poster's optimal framing
+function resetCurrentPosterFraming() {
+  if (!currentPoster || !currentPoster.bounds) {
+    map.flyToBounds([
+      [44.1743, -11.2083],
+      [56.8752, 24.5995]
+    ], { padding: [15, 15], duration: 1.0 });
+    return;
+  }
+  const b = currentPoster.bounds;
+  map.flyToBounds([
+    [b.south, b.west],
+    [b.north, b.east]
+  ], { padding: [15, 15], duration: 1.0 });
+}
 
-    // Layer 1: Broad smoky orange/ember haze (widest outer ambient glow)
-    const hazeGlow = L.polyline(routeCoords, {
-      color: '#e67e22',
-      weight: 22,
-      opacity: 0.35,
-      className: 'spooky-route-haze',
-      lineCap: 'round',
-      lineJoin: 'round'
-    }).addTo(map);
+// Switch between Gothic Cartographic Poster Editions
+function switchEdition(editionId, animate = true) {
+  const data = window.HAUNTED_DATA;
+  if (!data || !data.posters || !data.posters[editionId]) return;
 
-    // Layer 2: Glowing spectral ectoplasm aura (yellow/phosphor pulse)
-    const outerGlow = L.polyline(routeCoords, {
-      color: '#f0f921',
-      weight: 11,
-      opacity: 0.65,
-      className: 'spooky-route-aura',
-      lineCap: 'round',
-      lineJoin: 'round'
-    }).addTo(map);
+  // Stop active tour & narration before switching
+  if (tourActive) pauseTour(true);
+  if (window.spookyNarrator) window.spookyNarrator.stop();
 
-    // Layer 3: Wandering spirits stream (crawling ethereal dashed light along the road)
-    const spiritStream = L.polyline(routeCoords, {
-      color: '#ffffff',
-      weight: 3.5,
-      opacity: 0.85,
-      className: 'spooky-route-spirits',
-      lineCap: 'round',
-      lineJoin: 'round'
-    }).addTo(map);
+  currentEdition = editionId;
+  currentPoster = data.posters[editionId];
+  try {
+    localStorage.setItem('haunted_map_active_edition', editionId);
+  } catch (e) {}
 
-    // Layer 4: Intense bright spectral spine
-    const innerSpine = L.polyline(routeCoords, {
-      color: '#fefeed',
-      weight: 2.0,
-      opacity: 0.95,
-      className: 'spooky-route-core',
-      lineCap: 'round',
-      lineJoin: 'round'
-    }).addTo(map);
+  // 1. Update Header Brand Subtitle & Poster Title
+  const brandSub = document.getElementById('header-brand-subtitle');
+  if (brandSub) brandSub.textContent = currentPoster.headerSubtitle || currentPoster.subtitle;
 
-    routeLayers = [hazeGlow, outerGlow, spiritStream, innerSpine];
+  const posterTitle = document.getElementById('poster-title');
+  if (posterTitle) posterTitle.textContent = currentPoster.title;
+
+  const posterSub = document.getElementById('poster-subtitle');
+  if (posterSub) posterSub.textContent = currentPoster.subtitle;
+
+  // 2. Update Folklore Heritage Narrative Box
+  if (currentPoster.article) {
+    const badge = document.getElementById('poster-article-badge');
+    const p1 = document.getElementById('poster-article-p1');
+    const p2 = document.getElementById('poster-article-p2');
+    const cit = document.getElementById('poster-article-citation');
+    if (badge) badge.textContent = currentPoster.article.badge || 'Folklore Heritage';
+    if (p1) p1.textContent = currentPoster.article.p1 || '';
+    if (p2) p2.textContent = currentPoster.article.p2 || '';
+    if (cit) cit.textContent = currentPoster.article.citation || '';
   }
 
-  // 4. Creature Pin Markers (1 through 7)
-  data.folklore.forEach((item) => {
+  // 3. Update Dropdown and Pill states
+  document.querySelectorAll('.edition-pill').forEach(btn => {
+    btn.classList.toggle('active', btn.getAttribute('data-edition') === editionId);
+  });
+  const selectEl = document.getElementById('edition-select');
+  if (selectEl) selectEl.value = editionId;
+
+  // 4. Build Layers for this Poster
+  buildRouteLayers(currentPoster.route);
+  buildCreaturePins(currentPoster.folklore);
+  buildDraggableCardMarkers(currentPoster.folklore);
+  buildCountryLabels(currentPoster.countryLabels);
+
+  // 5. Update Tour State & Route Geometry
+  precalculateRouteDistances();
+  currentTourDistance = 0;
+  visitedStops.clear();
+  currentStopIndex = 0;
+  if (currentPoster.folklore && currentPoster.folklore.length > 0) {
+    updateTourDockInfo(currentPoster.folklore[0]);
+  }
+  updateTourPosition();
+
+  // 6. Framing
+  if (animate) {
+    resetCurrentPosterFraming();
+  } else if (currentPoster.bounds) {
+    const b = currentPoster.bounds;
+    map.fitBounds([
+      [b.south, b.west],
+      [b.north, b.east]
+    ], { padding: [15, 15] });
+  }
+
+  // Sound chime
+  if (window.hauntedAudio && !window.hauntedAudio.isMuted) {
+    window.hauntedAudio.playBell(0.85);
+  }
+}
+
+// ---------------------------------------------------------
+// 2. ROUTE & PIN BUILDERS
+// ---------------------------------------------------------
+function buildRouteLayers(routeGeo) {
+  routeLayers.forEach(l => map.removeLayer(l));
+  routeLayers = [];
+  routeCoords = [];
+
+  if (!routeGeo || !routeGeo.features || routeGeo.features.length === 0) return;
+  const rawCoords = routeGeo.features[0].geometry.coordinates;
+  routeCoords = rawCoords.map(c => [c[1], c[0]]);
+
+  const isChecked = document.getElementById('toggle-route')?.checked !== false;
+
+  const hazeGlow = L.polyline(routeCoords, {
+    color: '#e67e22',
+    weight: 22,
+    opacity: 0.35,
+    className: 'spooky-route-haze',
+    lineCap: 'round',
+    lineJoin: 'round'
+  });
+
+  const outerGlow = L.polyline(routeCoords, {
+    color: '#f0f921',
+    weight: 11,
+    opacity: 0.65,
+    className: 'spooky-route-aura',
+    lineCap: 'round',
+    lineJoin: 'round'
+  });
+
+  const spiritStream = L.polyline(routeCoords, {
+    color: '#ffffff',
+    weight: 3.5,
+    opacity: 0.85,
+    className: 'spooky-route-spirits',
+    lineCap: 'round',
+    lineJoin: 'round'
+  });
+
+  const innerSpine = L.polyline(routeCoords, {
+    color: '#fefeed',
+    weight: 2.0,
+    opacity: 0.95,
+    className: 'spooky-route-core',
+    lineCap: 'round',
+    lineJoin: 'round'
+  });
+
+  routeLayers = [hazeGlow, outerGlow, spiritStream, innerSpine];
+  if (isChecked) {
+    routeLayers.forEach(l => l.addTo(map));
+  }
+}
+
+function buildCreaturePins(folkloreList) {
+  creatureMarkers.forEach(c => map.removeLayer(c.marker));
+  creatureMarkers = [];
+
+  if (!folkloreList) return;
+
+  folkloreList.forEach(item => {
     const icon = L.divIcon({
       className: 'creature-marker-pin-wrapper',
       html: `<div class="creature-marker-pin" id="pin-${item.number}">${item.number}</div>`,
@@ -160,41 +285,53 @@ function initMap(data) {
 
     creatureMarkers.push({ marker, item });
   });
+}
 
-  // Default initial framing fitting exact 16:9 bounds
-  const bounds = L.latLngBounds([
-    [44.1743, -11.2083],
-    [56.8752, 24.5995]
-  ]);
-  map.fitBounds(bounds, { padding: [10, 10] });
+function buildCountryLabels(labels) {
+  countryLabelMarkers.forEach(m => map.removeLayer(m));
+  countryLabelMarkers = [];
+
+  if (!labels) return;
+
+  labels.forEach(loc => {
+    const icon = L.divIcon({
+      className: 'country-label-container',
+      html: `<div class="map-country-label">${loc.name}</div>`,
+      iconSize: [160, 24],
+      iconAnchor: [80, 12]
+    });
+    const marker = L.marker([loc.lat, loc.lon], { icon, interactive: false }).addTo(map);
+    countryLabelMarkers.push(marker);
+  });
 }
 
 // ---------------------------------------------------------
-// 2. DRAGGABLE & MAP-ANCHORED POSTER CARDS
+// 3. DRAGGABLE & MAP-ANCHORED POSTER CARDS
 // ---------------------------------------------------------
-function buildDraggableCardMarkers(data) {
-  // Clear any existing cards
+function buildDraggableCardMarkers(folkloreList) {
   cardMarkersList.forEach(c => {
     map.removeLayer(c.marker);
     if (c.leaderLine) map.removeLayer(c.leaderLine);
   });
   cardMarkersList = [];
 
-  // Load saved custom positions from localStorage
+  if (!folkloreList) return;
+
   let savedPositions = {};
   try {
-    savedPositions = JSON.parse(localStorage.getItem('haunted_map_card_positions') || '{}');
+    savedPositions = JSON.parse(localStorage.getItem(`haunted_map_card_positions_${currentEdition}`) || '{}');
   } catch (e) {
     savedPositions = {};
   }
 
-  data.folklore.forEach(item => {
-    // Determine position: saved user position or default calculated cartographic position
+  const isCardsChecked = document.getElementById('toggle-cards')?.checked !== false;
+  const isLeadersChecked = document.getElementById('toggle-leaders')?.checked !== false;
+
+  folkloreList.forEach(item => {
     const saved = savedPositions[item.number];
     const initialLat = saved && typeof saved.lat === 'number' ? saved.lat : item.cardLat;
     const initialLon = saved && typeof saved.lon === 'number' ? saved.lon : item.cardLon;
 
-    // 1. Spooky Phantom Tether connecting feature location to card position
     const leaderLine = L.polyline([[item.lat, item.lon], [initialLat, initialLon]], {
       color: '#f5b041',
       weight: 2.0,
@@ -202,9 +339,9 @@ function buildDraggableCardMarkers(data) {
       opacity: 0.85,
       className: 'card-leader-line',
       interactive: false
-    }).addTo(map);
+    });
+    if (isLeadersChecked) leaderLine.addTo(map);
 
-    // 2. Card Marker HTML (Clean layout with picture properly filling frame)
     const descWords = item.description.split(/\s+/).filter(w => w.length > 0);
     const tokenisedDesc = descWords.map((w, idx) => `<span class="lore-word" id="lore-word-${item.number}-${idx}">${w}</span>`).join(' ');
 
@@ -214,7 +351,7 @@ function buildDraggableCardMarkers(data) {
           <span>${item.title}</span>
         </div>
         <div class="card-image-box">
-          <img src="${item.image}" alt="${item.title}" class="card-img-${item.number}" draggable="false" style="width:100% !important; height:100% !important; object-fit:cover !important; display:block !important;">
+          <img src="${item.image}" alt="${item.title}" class="card-img-cryptid card-img-${item.number}" draggable="false" style="width:100% !important; height:100% !important; object-fit:cover !important; display:block !important;">
         </div>
         <div class="card-desc" id="card-desc-${item.number}">
           ${tokenisedDesc}
@@ -233,14 +370,13 @@ function buildDraggableCardMarkers(data) {
       draggable: true,
       icon: cardIcon,
       zIndexOffset: 650
-    }).addTo(map);
+    });
+    if (isCardsChecked) cardMarker.addTo(map);
 
     let dragStarted = false;
-    let dragStartPos = null;
 
-    cardMarker.on('dragstart', (e) => {
+    cardMarker.on('dragstart', () => {
       dragStarted = true;
-      dragStartPos = cardMarker.getLatLng();
       const cardEl = document.getElementById(`card-${item.number}`);
       if (cardEl) cardEl.classList.add('dragging');
       leaderLine.setStyle({ color: '#f0f921', weight: 3.2, opacity: 1.0 });
@@ -258,16 +394,10 @@ function buildDraggableCardMarkers(data) {
       const cardEl = document.getElementById(`card-${item.number}`);
       if (cardEl) cardEl.classList.remove('dragging');
       leaderLine.setStyle({ color: '#f5b041', weight: 2.0, opacity: 0.85 });
-      
-      // Save position to localStorage
       saveCardPosition(item.number, finalPos.lat, finalPos.lng);
-
-      setTimeout(() => {
-        dragStarted = false;
-      }, 100);
+      setTimeout(() => { dragStarted = false; }, 100);
     });
 
-    // Hover styling
     cardMarker.on('mouseover', () => {
       highlightPin(item.number);
       highlightCard(item.number);
@@ -278,16 +408,13 @@ function buildDraggableCardMarkers(data) {
     cardMarker.on('mouseout', () => {
       if (!dragStarted) {
         const cardEl = document.getElementById(`card-${item.number}`);
-        if (cardEl && cardEl.classList.contains('reading-active')) {
-          return; // Keep highlighted while being spoken by spooky voice
-        }
+        if (cardEl && cardEl.classList.contains('reading-active')) return;
         unhighlightPins();
         unhighlightCards();
         leaderLine.setStyle({ color: '#f5b041', weight: 2.0, opacity: 0.85 });
       }
     });
 
-    // Click on card opens Grimoire drawer & triggers spooky narration
     cardMarker.on('click', () => {
       if (!dragStarted) {
         selectStop(item.number, true, true);
@@ -300,17 +427,18 @@ function buildDraggableCardMarkers(data) {
 
 function saveCardPosition(number, lat, lon) {
   let saved = {};
+  const key = `haunted_map_card_positions_${currentEdition}`;
   try {
-    saved = JSON.parse(localStorage.getItem('haunted_map_card_positions') || '{}');
+    saved = JSON.parse(localStorage.getItem(key) || '{}');
   } catch (e) {
     saved = {};
   }
   saved[number] = { lat, lon };
-  localStorage.setItem('haunted_map_card_positions', JSON.stringify(saved));
+  localStorage.setItem(key, JSON.stringify(saved));
 }
 
 function resetCardPositions() {
-  localStorage.removeItem('haunted_map_card_positions');
+  localStorage.removeItem(`haunted_map_card_positions_${currentEdition}`);
   cardMarkersList.forEach(({ item, marker, leaderLine }) => {
     const origLatLng = L.latLng(item.cardLat, item.cardLon);
     marker.setLatLng(origLatLng);
@@ -324,7 +452,7 @@ function resetCardPositions() {
 }
 
 // ---------------------------------------------------------
-// 3. HIGHLIGHT HELPERS
+// 4. HIGHLIGHT HELPERS & STOP SELECTION
 // ---------------------------------------------------------
 function highlightPin(number) {
   const pin = document.getElementById(`pin-${number}`);
@@ -363,13 +491,12 @@ function unhighlightLeaders() {
   });
 }
 
-// Select a stop
 function selectStop(number, openDrawer = true, shouldSpeak = true) {
-  const data = window.HAUNTED_DATA;
-  const item = data.folklore.find(f => f.number === number);
+  if (!currentPoster || !currentPoster.folklore) return;
+  const item = currentPoster.folklore.find(f => f.number === number);
   if (!item) return;
 
-  currentStopIndex = number - 1;
+  currentStopIndex = currentPoster.folklore.indexOf(item);
   unhighlightPins();
   unhighlightCards();
   unhighlightLeaders();
@@ -379,11 +506,11 @@ function selectStop(number, openDrawer = true, shouldSpeak = true) {
   highlightLeader(number);
 
   if (window.hauntedAudio) {
-    window.hauntedAudio.playBell(1.0 - (number * 0.05));
+    window.hauntedAudio.playBell(1.0 - (number * 0.04));
   }
 
-  // Smoothly center the map on this stop
-  map.flyTo([item.lat, item.lon], 7, {
+  // Smoothly center map on this stop
+  map.flyTo([item.lat, item.lon], Math.max(6, map.getZoom()), {
     duration: 1.2,
     easeLinearity: 0.25
   });
@@ -397,22 +524,6 @@ function selectStop(number, openDrawer = true, shouldSpeak = true) {
   if (shouldSpeak && window.spookyNarrator && window.spookyNarrator.enabled) {
     window.spookyNarrator.readStop(item);
   }
-}
-
-// ---------------------------------------------------------
-// 4. COUNTRY LABELS
-// ---------------------------------------------------------
-function buildCountryLabels(labels) {
-  if (!labels) return;
-  labels.forEach(loc => {
-    const icon = L.divIcon({
-      className: 'country-label-container',
-      html: `<div class="map-country-label">${loc.name}</div>`,
-      iconSize: [120, 24],
-      iconAnchor: [60, 12]
-    });
-    L.marker([loc.lat, loc.lon], { icon, interactive: false }).addTo(map);
-  });
 }
 
 // ---------------------------------------------------------
@@ -468,59 +579,442 @@ function closeLightbox() {
 }
 
 // ---------------------------------------------------------
-// 6. INSET MINIMAP (WORLD WITH EUROPE HIGHLIGHT)
+// 6. FUNCTIONAL MAP NAVIGATION PANEL (MINIMAP, COMPASS, DYNAMIC SCALE)
 // ---------------------------------------------------------
-function drawInsetMinimap(worldGeo) {
-  const canvas = document.getElementById('inset-map-canvas');
-  if (!canvas || !worldGeo) return;
+let minimapBgCanvas = null;
+let minimapCanvas = null;
+let minimapCtx = null;
+let minimapWorldData = null;
+let isDraggingMinimap = false;
+let minimapDragOffset = [0, 0];
+let currentMinimapRect = null;
+let scaleUnit = 'mi'; // 'mi' or 'km'
+let minimapRipple = null; // { x, y, radius, maxRadius, alpha }
+let minimapAnimFrame = null;
 
-  const ctx = canvas.getContext('2d');
-  const w = canvas.width = canvas.clientWidth * 2;
-  const h = canvas.height = canvas.clientHeight * 2;
+function initMapNavigationPanel(worldGeo) {
+  minimapCanvas = document.getElementById('inset-map-canvas');
+  if (!minimapCanvas || !worldGeo) return;
 
-  ctx.fillStyle = '#17181c';
-  ctx.fillRect(0, 0, w, h);
+  minimapCtx = minimapCanvas.getContext('2d');
+  minimapWorldData = worldGeo;
 
-  function project(lon, lat) {
-    const x = ((lon + 180) / 360) * w;
-    const y = ((90 - lat) / 180) * h;
-    return [x, y];
-  }
+  // Build high-performance pre-rendered background canvas
+  renderMinimapBackground();
 
-  ctx.fillStyle = '#343538';
-  ctx.strokeStyle = '#222326';
-  ctx.lineWidth = 1;
+  // Draw initial viewport state
+  drawMinimap();
 
-  worldGeo.features.forEach(feat => {
+  // Setup interactive pointer events on minimap (drag, click, hover)
+  setupMinimapInteractions();
+
+  // Setup interactive Compass Rose (North reset)
+  initCompassRose();
+
+  // Setup dynamic Scale Bar
+  initScaleBar();
+
+  // Keep minimap and scale bar in sync with main Leaflet map
+  map.on('move', () => {
+    drawMinimap();
+    updateDynamicScaleBar();
+  });
+  map.on('zoomend', () => {
+    drawMinimap();
+    updateDynamicScaleBar();
+  });
+  map.on('resize', () => {
+    renderMinimapBackground();
+    drawMinimap();
+    updateDynamicScaleBar();
+  });
+
+  // Calculate initial scale bar
+  setTimeout(updateDynamicScaleBar, 200);
+}
+
+function projectMinimap(lon, lat, w, h) {
+  const x = ((lon + 180) / 360) * w;
+  const y = ((90 - lat) / 180) * h;
+  return [x, y];
+}
+
+function unprojectMinimap(x, y, w, h) {
+  const lon = (x / w) * 360 - 180;
+  const lat = 90 - (y / h) * 180;
+  return [Math.max(-85, Math.min(85, lat)), Math.max(-180, Math.min(180, lon))];
+}
+
+function renderMinimapBackground() {
+  if (!minimapCanvas || !minimapWorldData) return;
+
+  const rect = minimapCanvas.getBoundingClientRect();
+  const dpr = Math.max(2, window.devicePixelRatio || 2);
+  const w = minimapCanvas.width = Math.round((rect.width || 180) * dpr);
+  const h = minimapCanvas.height = Math.round((rect.height || 110) * dpr);
+
+  minimapBgCanvas = document.createElement('canvas');
+  minimapBgCanvas.width = w;
+  minimapBgCanvas.height = h;
+  const bgCtx = minimapBgCanvas.getContext('2d');
+
+  // Deep dark sea background
+  bgCtx.fillStyle = '#17181c';
+  bgCtx.fillRect(0, 0, w, h);
+
+  // Subtle minimap graticule grid lines
+  bgCtx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+  bgCtx.lineWidth = 1;
+  // Equator
+  const [eqX1, eqY] = projectMinimap(-180, 0, w, h);
+  const [eqX2] = projectMinimap(180, 0, w, h);
+  bgCtx.beginPath();
+  bgCtx.moveTo(eqX1, eqY);
+  bgCtx.lineTo(eqX2, eqY);
+  bgCtx.stroke();
+  // Prime Meridian
+  const [pmX, pmY1] = projectMinimap(0, 85, w, h);
+  const [, pmY2] = projectMinimap(0, -85, w, h);
+  bgCtx.beginPath();
+  bgCtx.moveTo(pmX, pmY1);
+  bgCtx.lineTo(pmX, pmY2);
+  bgCtx.stroke();
+
+  // World landmass polygons
+  bgCtx.fillStyle = '#343538';
+  bgCtx.strokeStyle = '#222326';
+  bgCtx.lineWidth = 1;
+
+  minimapWorldData.features.forEach(feat => {
     const geom = feat.geometry;
     if (!geom) return;
 
-    ctx.beginPath();
+    bgCtx.beginPath();
     const polys = geom.type === 'MultiPolygon' ? geom.coordinates : [geom.coordinates];
 
     polys.forEach(poly => {
       poly.forEach(ring => {
         ring.forEach((pt, i) => {
-          const [px, py] = project(pt[0], pt[1]);
-          if (i === 0) ctx.moveTo(px, py);
-          else ctx.lineTo(px, py);
+          const [px, py] = projectMinimap(pt[0], pt[1], w, h);
+          if (i === 0) bgCtx.moveTo(px, py);
+          else bgCtx.lineTo(px, py);
         });
       });
     });
-    ctx.fill();
-    ctx.stroke();
+    bgCtx.fill();
+    bgCtx.stroke();
+  });
+}
+
+function getMinimapViewportRect(w, h) {
+  if (!map) return null;
+  const b = map.getBounds();
+  const north = Math.min(84, Math.max(-84, b.getNorth()));
+  const south = Math.min(84, Math.max(-84, b.getSouth()));
+  let west = b.getWest();
+  let east = b.getEast();
+
+  if (east - west >= 360) {
+    west = -180;
+    east = 180;
+  } else {
+    west = Math.max(-180, Math.min(180, west));
+    east = Math.max(-180, Math.min(180, east));
+  }
+
+  const [x1, y1] = projectMinimap(west, north, w, h);
+  const [x2, y2] = projectMinimap(east, south, w, h);
+
+  const rectW = Math.max(12, Math.abs(x2 - x1));
+  const rectH = Math.max(8, Math.abs(y2 - y1));
+  const rectX = Math.min(w - rectW, Math.max(0, Math.min(x1, x2)));
+  const rectY = Math.min(h - rectH, Math.max(0, Math.min(y1, y2)));
+
+  return { x: rectX, y: rectY, w: rectW, h: rectH };
+}
+
+function drawMinimap() {
+  if (!minimapCanvas || !minimapCtx || !minimapBgCanvas) return;
+
+  const w = minimapCanvas.width;
+  const h = minimapCanvas.height;
+
+  // 1. Draw cached world background
+  minimapCtx.clearRect(0, 0, w, h);
+  minimapCtx.drawImage(minimapBgCanvas, 0, 0);
+
+  // 2. Compute dynamic viewport rect
+  currentMinimapRect = getMinimapViewportRect(w, h);
+  if (!currentMinimapRect) return;
+
+  const { x, y, w: rw, h: rh } = currentMinimapRect;
+
+  // Semi-transparent glowing amber fill
+  minimapCtx.fillStyle = 'rgba(240, 192, 90, 0.22)';
+  minimapCtx.fillRect(x, y, rw, rh);
+
+  // Outer glowing border
+  minimapCtx.save();
+  minimapCtx.shadowColor = '#f5b041';
+  minimapCtx.shadowBlur = 8;
+  minimapCtx.strokeStyle = '#f5b041';
+  minimapCtx.lineWidth = 2.5;
+  minimapCtx.strokeRect(x, y, rw, rh);
+  minimapCtx.restore();
+
+  // Corner viewfinder brackets
+  const bracketLen = Math.min(rw * 0.28, rh * 0.28, 6);
+  if (bracketLen >= 3) {
+    minimapCtx.strokeStyle = '#ffeaa7';
+    minimapCtx.lineWidth = 2;
+    minimapCtx.beginPath();
+    // Top-left
+    minimapCtx.moveTo(x, y + bracketLen); minimapCtx.lineTo(x, y); minimapCtx.lineTo(x + bracketLen, y);
+    // Top-right
+    minimapCtx.moveTo(x + rw - bracketLen, y); minimapCtx.lineTo(x + rw, y); minimapCtx.lineTo(x + rw, y + bracketLen);
+    // Bottom-left
+    minimapCtx.moveTo(x, y + rh - bracketLen); minimapCtx.lineTo(x, y + rh); minimapCtx.lineTo(x + bracketLen, y + rh);
+    // Bottom-right
+    minimapCtx.moveTo(x + rw - bracketLen, y + rh); minimapCtx.lineTo(x + rw, y + rh); minimapCtx.lineTo(x + rw, y + rh - bracketLen);
+    minimapCtx.stroke();
+  }
+
+  // Viewport center reticle / crosshair dot
+  minimapCtx.fillStyle = '#ffffff';
+  minimapCtx.beginPath();
+  minimapCtx.arc(x + rw / 2, y + rh / 2, 2, 0, Math.PI * 2);
+  minimapCtx.fill();
+
+  // Active click ripple feedback
+  if (minimapRipple) {
+    minimapCtx.save();
+    minimapCtx.strokeStyle = `rgba(255, 215, 0, ${minimapRipple.alpha})`;
+    minimapCtx.lineWidth = 2;
+    minimapCtx.beginPath();
+    minimapCtx.arc(minimapRipple.x, minimapRipple.y, minimapRipple.radius, 0, Math.PI * 2);
+    minimapCtx.stroke();
+    minimapCtx.restore();
+  }
+}
+
+function triggerMinimapRipple(canvasX, canvasY) {
+  minimapRipple = { x: canvasX, y: canvasY, radius: 4, maxRadius: 28, alpha: 0.95 };
+  if (minimapAnimFrame) cancelAnimationFrame(minimapAnimFrame);
+
+  function step() {
+    if (!minimapRipple) return;
+    minimapRipple.radius += 2.2;
+    minimapRipple.alpha -= 0.08;
+    if (minimapRipple.alpha <= 0 || minimapRipple.radius >= minimapRipple.maxRadius) {
+      minimapRipple = null;
+      drawMinimap();
+      return;
+    }
+    drawMinimap();
+    minimapAnimFrame = requestAnimationFrame(step);
+  }
+  minimapAnimFrame = requestAnimationFrame(step);
+}
+
+function setupMinimapInteractions() {
+  const frame = document.getElementById('inset-map-frame');
+  if (!minimapCanvas || !frame) return;
+
+  function getCanvasCoords(e) {
+    const rect = minimapCanvas.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    const x = ((clientX - rect.left) / rect.width) * minimapCanvas.width;
+    const y = ((clientY - rect.top) / rect.height) * minimapCanvas.height;
+    return [x, y];
+  }
+
+  function isInsideRect(x, y, rect) {
+    if (!rect) return false;
+    const pad = 6;
+    return x >= (rect.x - pad) && x <= (rect.x + rect.w + pad) &&
+           y >= (rect.y - pad) && y <= (rect.y + rect.h + pad);
+  }
+
+  function onPointerDown(e) {
+    const [cx, cy] = getCanvasCoords(e);
+    const w = minimapCanvas.width;
+    const h = minimapCanvas.height;
+
+    if (currentMinimapRect && isInsideRect(cx, cy, currentMinimapRect)) {
+      // User grabbed the golden viewport box to drag
+      isDraggingMinimap = true;
+      minimapDragOffset = [
+        cx - (currentMinimapRect.x + currentMinimapRect.w / 2),
+        cy - (currentMinimapRect.y + currentMinimapRect.h / 2)
+      ];
+      frame.classList.add('dragging');
+    } else {
+      // Clicked anywhere on world minimap: pan to location & ripple
+      const [lat, lon] = unprojectMinimap(cx, cy, w, h);
+      map.panTo([lat, lon], { animate: true, duration: 0.6 });
+      triggerMinimapRipple(cx, cy);
+      if (window.hauntedAudio && !window.hauntedAudio.isMuted) {
+        window.hauntedAudio.playWhisper();
+      }
+      isDraggingMinimap = true;
+      minimapDragOffset = [0, 0];
+      frame.classList.add('dragging');
+    }
+  }
+
+  function onPointerMove(e) {
+    const [cx, cy] = getCanvasCoords(e);
+    const w = minimapCanvas.width;
+    const h = minimapCanvas.height;
+
+    if (isDraggingMinimap) {
+      // Dragging viewport around the world
+      const targetX = Math.max(0, Math.min(w, cx - minimapDragOffset[0]));
+      const targetY = Math.max(0, Math.min(h, cy - minimapDragOffset[1]));
+      const [lat, lon] = unprojectMinimap(targetX, targetY, w, h);
+      map.setView([lat, lon], map.getZoom(), { animate: false });
+    } else {
+      // Hover feedback
+      if (currentMinimapRect && isInsideRect(cx, cy, currentMinimapRect)) {
+        minimapCanvas.style.cursor = 'grab';
+      } else {
+        minimapCanvas.style.cursor = 'crosshair';
+      }
+    }
+  }
+
+  function onPointerUp() {
+    if (isDraggingMinimap) {
+      isDraggingMinimap = false;
+      frame.classList.remove('dragging');
+      minimapCanvas.style.cursor = 'grab';
+    }
+  }
+
+  minimapCanvas.addEventListener('mousedown', onPointerDown);
+  window.addEventListener('mousemove', onPointerMove);
+  window.addEventListener('mouseup', onPointerUp);
+
+  minimapCanvas.addEventListener('touchstart', onPointerDown, { passive: false });
+  window.addEventListener('touchmove', onPointerMove, { passive: false });
+  window.addEventListener('touchend', onPointerUp);
+
+  // Double click resets to current poster framing
+  minimapCanvas.addEventListener('dblclick', (e) => {
+    e.preventDefault();
+    if (window.hauntedAudio && !window.hauntedAudio.isMuted) {
+      window.hauntedAudio.playWhisper();
+    }
+    resetCurrentPosterFraming();
+  });
+}
+
+function initCompassRose() {
+  const compass = document.getElementById('compass-rose') || document.querySelector('.compass-rose');
+  if (!compass) return;
+
+  function handleCompassClick(e) {
+    e.preventDefault();
+    if (window.hauntedAudio && !window.hauntedAudio.isMuted) {
+      window.hauntedAudio.playWhisper();
+    }
+
+    // Trigger smooth 360-deg magnetic spin animation
+    compass.classList.remove('compass-spinning');
+    void compass.offsetWidth; // Force CSS reflow
+    compass.classList.add('compass-spinning');
+
+    // Reset current poster map framing
+    resetCurrentPosterFraming();
+  }
+
+  compass.addEventListener('click', handleCompassClick);
+  compass.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      handleCompassClick(e);
+    }
   });
 
-  // Highlight bounding box
-  const [x1, y1] = project(-11.5, 57.5);
-  const [x2, y2] = project(26.0, 43.5);
+  compass.addEventListener('animationend', () => {
+    compass.classList.remove('compass-spinning');
+  });
+}
 
-  ctx.strokeStyle = '#f5b041';
-  ctx.lineWidth = 2.5;
-  ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+function initScaleBar() {
+  const scalebar = document.getElementById('scalebar-custom') || document.querySelector('.scalebar-custom');
+  if (!scalebar) return;
 
-  ctx.fillStyle = 'rgba(240, 192, 90, 0.18)';
-  ctx.fillRect(x1, y1, x2 - x1, y2 - y1);
+  function toggleUnits() {
+    scaleUnit = scaleUnit === 'mi' ? 'km' : 'mi';
+    updateDynamicScaleBar();
+    if (window.hauntedAudio && !window.hauntedAudio.isMuted) {
+      window.hauntedAudio.playWhisper();
+    }
+    scalebar.setAttribute('title', `Scale: Showing ${scaleUnit === 'mi' ? 'Miles (mi)' : 'Kilometers (km)'} • Click to toggle`);
+  }
+
+  scalebar.addEventListener('click', toggleUnits);
+  scalebar.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      toggleUnits();
+    }
+  });
+
+  updateDynamicScaleBar();
+}
+
+function updateDynamicScaleBar() {
+  if (!map) return;
+  const center = map.getCenter();
+  const p1 = map.latLngToContainerPoint(center);
+  const p2 = L.point(p1.x + 100, p1.y);
+  const latLng2 = map.containerPointToLatLng(p2);
+  const metersPer100px = center.distanceTo(latLng2);
+  if (!metersPer100px || metersPer100px <= 0) return;
+
+  const metersPerPx = metersPer100px / 100;
+  const isMiles = scaleUnit === 'mi';
+
+  // Standard step intervals for clean cartographic display
+  const standardSteps = [
+    0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 25, 50, 75, 100, 150, 200, 300, 500, 750, 1000, 1500, 2000, 3000, 5000
+  ];
+
+  let bestStep = standardSteps[0];
+  let bestPxDiff = Infinity;
+
+  for (const step of standardSteps) {
+    const px = isMiles ? (step / (metersPerPx * 0.000621371)) : (step * 1000 / metersPerPx);
+    if (px >= 60 && px <= 140) {
+      const diff = Math.abs(px - 100);
+      if (diff < bestPxDiff) {
+        bestPxDiff = diff;
+        bestStep = step;
+      }
+    }
+  }
+
+  const finalPxWidth = Math.round(isMiles ? (bestStep / (metersPerPx * 0.000621371)) : (bestStep * 1000 / metersPerPx));
+
+  const scalebarLine = document.querySelector('.scalebar-line');
+  const scalebarTicks = document.querySelector('.scalebar-ticks');
+  const tick0 = document.getElementById('scale-tick-0');
+  const tickMid = document.getElementById('scale-tick-mid');
+  const tickEnd = document.getElementById('scale-tick-end');
+
+  if (scalebarLine && scalebarTicks) {
+    scalebarLine.style.width = `${finalPxWidth}px`;
+    scalebarTicks.style.width = `${finalPxWidth}px`;
+
+    const halfStep = Number.isInteger(bestStep) ? (bestStep % 2 === 0 ? bestStep / 2 : (bestStep / 2).toFixed(1)) : (bestStep / 2).toFixed(1);
+    const unitLabel = isMiles ? 'mi' : 'km';
+
+    if (tick0) tick0.textContent = '0';
+    if (tickMid) tickMid.textContent = `${halfStep}`;
+    if (tickEnd) tickEnd.textContent = `${bestStep} ${unitLabel}`;
+  }
 }
 
 // ---------------------------------------------------------
@@ -550,8 +1044,8 @@ function precalculateRouteDistances() {
     routeDistances.push(totalRouteDistance);
   }
 
-  // Precalculate closest distance along the route for each of the 7 folklore stops
-  const folklore = window.HAUNTED_DATA.folklore;
+  // Precalculate closest distance along the route for each of the folklore stops
+  const folklore = (currentPoster && currentPoster.folklore) ? currentPoster.folklore : (window.HAUNTED_DATA.folklore || []);
   stopDistances = folklore.map(stop => {
     let minD = Infinity;
     let bestIdx = 0;
@@ -565,7 +1059,7 @@ function precalculateRouteDistances() {
     return {
       stop,
       index: bestIdx,
-      distance: routeDistances[bestIdx]
+      distance: routeDistances[bestIdx] || 0
     };
   });
 }
@@ -807,9 +1301,12 @@ function updateTourPosition() {
 }
 
 function checkStopArrival() {
+  if (!stopDistances || stopDistances.length === 0) return;
+  const tolerance = Math.max(30000, totalRouteDistance * 0.015);
+
   // If user scrubbed backwards, clear visited stops ahead of current position
   for (let i = 0; i < stopDistances.length; i++) {
-    if (stopDistances[i].distance > currentTourDistance + 15000) {
+    if (stopDistances[i].distance > currentTourDistance + tolerance * 1.5) {
       visitedStops.delete(stopDistances[i].stop.number);
     }
   }
@@ -817,8 +1314,8 @@ function checkStopArrival() {
   for (let i = 0; i < stopDistances.length; i++) {
     const sd = stopDistances[i];
     const diff = Math.abs(currentTourDistance - sd.distance);
-    // If within 25km of the stop along the road
-    if (diff < 25000 && !visitedStops.has(sd.stop.number)) {
+    // If within route tolerance of the stop
+    if (diff < tolerance && !visitedStops.has(sd.stop.number)) {
       visitedStops.add(sd.stop.number);
       currentStopIndex = i;
 
@@ -836,7 +1333,7 @@ function checkStopArrival() {
       updateTourDockInfo(sd.stop);
 
       if (window.hauntedAudio) {
-        window.hauntedAudio.playBell(1.0 - (sd.stop.number * 0.05));
+        window.hauntedAudio.playBell(1.0 - (sd.stop.number * 0.04));
       }
 
       // Check if Spooky Voice narration is active
@@ -956,21 +1453,36 @@ function initUIEvents(data) {
   posterBtn.addEventListener('click', () => {
     posterBtn.classList.add('active');
     explorerBtn.classList.remove('active');
+    document.body.classList.remove('mode-explorer');
+    document.body.classList.add('mode-poster');
     posterOverlay.style.display = 'block';
     layerPanel.classList.remove('visible');
-
-    map.flyToBounds([
-      [44.1743, -11.2083],
-      [56.8752, 24.5995]
-    ], { padding: [10, 10], duration: 1.0 });
+    resetCurrentPosterFraming();
   });
 
   explorerBtn.addEventListener('click', () => {
     explorerBtn.classList.add('active');
     posterBtn.classList.remove('active');
-    posterOverlay.style.display = 'none';
+    document.body.classList.remove('mode-poster');
+    document.body.classList.add('mode-explorer');
+    posterOverlay.style.display = 'block';
     layerPanel.classList.add('visible');
   });
+
+  // Poster Edition switching
+  document.querySelectorAll('.edition-pill').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const ed = btn.getAttribute('data-edition');
+      if (ed) switchEdition(ed, true);
+    });
+  });
+
+  const editionSelect = document.getElementById('edition-select');
+  if (editionSelect) {
+    editionSelect.addEventListener('change', (e) => {
+      switchEdition(e.target.value, true);
+    });
+  }
 
   // Audio Toggle
   const audioBtn = document.getElementById('audio-toggle-btn');
@@ -989,10 +1501,7 @@ function initUIEvents(data) {
 
   // Reset Framing Button
   document.getElementById('reset-view-btn').addEventListener('click', () => {
-    map.flyToBounds([
-      [44.1743, -11.2083],
-      [56.8752, 24.5995]
-    ], { padding: [10, 10], duration: 1.0 });
+    resetCurrentPosterFraming();
   });
 
   // Article Box Minimize / Expand Toggle
