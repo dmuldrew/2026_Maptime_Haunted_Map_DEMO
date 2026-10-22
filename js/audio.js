@@ -18,11 +18,11 @@ class HauntedAudio {
     this.ctx = new AudioContext();
 
     this.masterGain = this.ctx.createGain();
-    this.masterGain.gain.setValueAtTime(this.isMuted ? 0 : 0.45, this.ctx.currentTime);
+    this.masterGain.gain.setValueAtTime(this.isMuted ? 0 : 0.5, this.ctx.currentTime);
     this.masterGain.connect(this.ctx.destination);
 
     this.droneGain = this.ctx.createGain();
-    this.droneGain.gain.setValueAtTime(0, this.ctx.currentTime);
+    this.droneGain.gain.setValueAtTime(this.isMuted ? 0 : 0.35, this.ctx.currentTime);
     this.droneGain.connect(this.masterGain);
 
     this.setupDrone();
@@ -83,7 +83,9 @@ class HauntedAudio {
 
   // Play a haunting medieval church / cathedral bell toll
   playBell(pitchMultiplier = 1.0) {
-    if (this.isMuted || !this.ctx) return;
+    if (this.isMuted) return;
+    if (!this.ctx) this.init();
+    if (!this.ctx) return;
     if (this.ctx.state === 'suspended') this.ctx.resume();
 
     const t = this.ctx.currentTime;
@@ -111,7 +113,9 @@ class HauntedAudio {
 
   // Play subtle ghostly chime for hover/selection
   playWhisper() {
-    if (this.isMuted || !this.ctx) return;
+    if (this.isMuted) return;
+    if (!this.ctx) this.init();
+    if (!this.ctx) return;
     if (this.ctx.state === 'suspended') this.ctx.resume();
 
     const t = this.ctx.currentTime;
@@ -134,7 +138,9 @@ class HauntedAudio {
 
   // Ambient ghostly sound bed layered under the spoken spooky narration
   startNarrationBed() {
-    if (this.isMuted || !this.ctx) return;
+    if (this.isMuted) return;
+    if (!this.ctx) this.init();
+    if (!this.ctx) return;
     if (this.ctx.state === 'suspended') this.ctx.resume();
 
     if (this.narrationGain) {
@@ -165,14 +171,25 @@ class HauntedAudio {
 
   stopNarrationBed() {
     if (!this.narrationGain || !this.ctx) return;
+    const gainToStop = this.narrationGain;
+    const oscToStop = this.narrationOsc;
+    this.narrationGain = null;
+    this.narrationOsc = null;
+
     const t = this.ctx.currentTime;
-    this.narrationGain.gain.setTargetAtTime(0.0001, t, 0.4);
+    gainToStop.gain.cancelScheduledValues(t);
+    gainToStop.gain.setValueAtTime(Math.max(0.0001, gainToStop.gain.value || 0.0001), t);
+    gainToStop.gain.setTargetAtTime(0.0001, t, 0.4);
     setTimeout(() => {
-      if (this.narrationOsc) {
-        try { this.narrationOsc.stop(); } catch(e) {}
-        this.narrationOsc = null;
+      if (oscToStop) {
+        try {
+          oscToStop.stop();
+          oscToStop.disconnect();
+        } catch (e) {}
       }
-      this.narrationGain = null;
+      try {
+        gainToStop.disconnect();
+      } catch (e) {}
     }, 1200);
   }
 }

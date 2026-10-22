@@ -283,7 +283,7 @@ function buildDraggableCardMarkers(data) {
         }
         unhighlightPins();
         unhighlightCards();
-        leaderLine.setStyle({ color: '#f5b041', weight: 2.0, opacity: 0.85 });
+        unhighlightLeaders();
       }
     });
 
@@ -326,13 +326,25 @@ function resetCardPositions() {
 // ---------------------------------------------------------
 // 3. HIGHLIGHT HELPERS
 // ---------------------------------------------------------
+function getActiveNarrationStopNumber() {
+  const narrator = window.spookyNarrator;
+  if (narrator && (narrator.isSpeaking || narrator.isPaused) && narrator.activeStopNumber) {
+    return narrator.activeStopNumber;
+  }
+  return null;
+}
+
 function highlightPin(number) {
   const pin = document.getElementById(`pin-${number}`);
   if (pin) pin.classList.add('active');
 }
 
 function unhighlightPins() {
-  document.querySelectorAll('.creature-marker-pin').forEach(p => p.classList.remove('active'));
+  const activeStop = getActiveNarrationStopNumber();
+  document.querySelectorAll('.creature-marker-pin').forEach(p => {
+    if (activeStop && p.id === `pin-${activeStop}`) return;
+    p.classList.remove('active');
+  });
 }
 
 function highlightCard(number) {
@@ -356,20 +368,87 @@ function highlightLeader(number) {
 }
 
 function unhighlightLeaders() {
+  const activeStop = getActiveNarrationStopNumber();
   cardMarkersList.forEach(c => {
     if (c.leaderLine) {
-      c.leaderLine.setStyle({ color: '#f0c05a', weight: 1.5, opacity: 0.65 });
+      if (activeStop && c.item.number === activeStop) {
+        c.leaderLine.setStyle({ color: '#f0f921', weight: 2.5, opacity: 0.95 });
+      } else {
+        c.leaderLine.setStyle({ color: '#f5b041', weight: 2.0, opacity: 0.85 });
+      }
     }
   });
 }
 
+function syncVisitedStopsForDistance(dist, includeCurrentAtDist = false) {
+  visitedStops.clear();
+  for (let i = 0; i < stopDistances.length; i++) {
+    const sd = stopDistances[i];
+    if (sd.distance < dist - 25000 || (includeCurrentAtDist && Math.abs(sd.distance - dist) <= 25000)) {
+      visitedStops.add(sd.stop.number);
+    }
+  }
+}
+
+function triggerStopNarration(item, continueTourAfter = false) {
+  if (window.spookyNarrator && window.spookyNarrator.enabled) {
+    if (continueTourAfter) {
+      tourPausedForSpeech = true;
+      window.tourPausedForSpeech = true;
+      pauseTour(false /* paused for speech, keep speech alive */);
+    }
+
+    window.spookyNarrator.readStop(item, () => {
+      if (tourPausedForSpeech) {
+        // If at the final stop at the end of the route, finish the tour cleanly
+        if (currentTourDistance >= totalRouteDistance - 1000) {
+          pauseTour(true);
+          return;
+        }
+        // Short eerie pause before continuing along the road
+        speechResumeTimeout = setTimeout(() => {
+          speechResumeTimeout = null;
+          if (!tourActive && tourPausedForSpeech) {
+            tourPausedForSpeech = false;
+            window.tourPausedForSpeech = false;
+            startTour();
+          }
+        }, 800);
+      }
+    });
+  }
+}
+
 // Select a stop
-function selectStop(number, openDrawer = true, shouldSpeak = true) {
+function selectStop(number, openDrawer = true, shouldSpeak = true, continueTourAfter = false) {
   const data = window.HAUNTED_DATA;
   const item = data.folklore.find(f => f.number === number);
   if (!item) return;
 
+  if (!continueTourAfter) {
+    if (speechResumeTimeout) {
+      clearTimeout(speechResumeTimeout);
+      speechResumeTimeout = null;
+    }
+    if (tourActive) {
+      pauseTour(false);
+    }
+    tourPausedForSpeech = false;
+    window.tourPausedForSpeech = false;
+  }
+
   currentStopIndex = number - 1;
+  const target = stopDistances[currentStopIndex];
+  if (target) {
+    currentTourDistance = target.distance;
+    syncVisitedStopsForDistance(currentTourDistance, true);
+    updateTourPosition(false);
+  }
+
+  if (window.spookyNarrator && (!shouldSpeak || !window.spookyNarrator.enabled)) {
+    window.spookyNarrator.stop();
+  }
+
   unhighlightPins();
   unhighlightCards();
   unhighlightLeaders();
@@ -395,7 +474,7 @@ function selectStop(number, openDrawer = true, shouldSpeak = true) {
   }
 
   if (shouldSpeak && window.spookyNarrator && window.spookyNarrator.enabled) {
-    window.spookyNarrator.readStop(item);
+    triggerStopNarration(item, continueTourAfter);
   }
 }
 
@@ -675,8 +754,17 @@ function initTour(data) {
   phantomMarker = L.marker(routeCoords[0], { icon: spectralIcon, zIndexOffset: 1200 }).addTo(map);
 
   playBtn.addEventListener('click', () => {
-    const isSpeaking = window.spookyNarrator && window.spookyNarrator.isSpeaking;
-    if (tourActive || tourPausedForSpeech || isSpeaking) {
+    const narrator = window.spookyNarrator;
+    const isSpeaking = narrator && narrator.isSpeaking;
+    const isPaused = narrator && narrator.isPaused;
+
+    if (isSpeaking) {
+      // Pause description narration in place (preserving tourPausedForSpeech if mid-tour)
+      narrator.pause();
+    } else if (isPaused) {
+      // Resume description narration from where it was paused
+      narrator.resume();
+    } else if (tourActive || tourPausedForSpeech || speechResumeTimeout) {
       pauseTour(true);
     } else {
       startTour();
@@ -751,21 +839,44 @@ function initTour(data) {
   }
 
   progressContainer.addEventListener('click', (e) => {
+    const wasTouring = tourActive || tourPausedForSpeech || Boolean(speechResumeTimeout);
     if (speechResumeTimeout) {
       clearTimeout(speechResumeTimeout);
       speechResumeTimeout = null;
     }
-    if (window.spookyNarrator) window.spookyNarrator.stop();
     tourPausedForSpeech = false;
     window.tourPausedForSpeech = false;
+    if (window.spookyNarrator) window.spookyNarrator.stop();
+
     const rect = progressContainer.getBoundingClientRect();
     const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
     currentTourDistance = ratio * totalRouteDistance;
+    syncVisitedStopsForDistance(currentTourDistance, false);
+
+    // Update current stop label to the stop at or most recently passed
+    let latestIdx = 0;
+    for (let i = 0; i < stopDistances.length; i++) {
+      if (stopDistances[i].distance <= currentTourDistance + 25000) {
+        latestIdx = i;
+      }
+    }
+    currentStopIndex = latestIdx;
+    if (stopDistances[currentStopIndex]) {
+      updateTourDockInfo(stopDistances[currentStopIndex].stop);
+    }
+
     updateTourPosition();
+
+    if (wasTouring && !tourActive) {
+      startTour();
+    } else if (!wasTouring) {
+      const playBtn = document.getElementById('tour-play-btn');
+      if (playBtn) playBtn.innerHTML = '▶';
+    }
   });
 
   // Initialize marker at start
-  updateTourPosition();
+  updateTourPosition(false);
 }
 
 let tourPausedForSpeech = false;
@@ -789,7 +900,12 @@ function startTour() {
   if (currentTourDistance >= totalRouteDistance - 1000) {
     currentTourDistance = 0;
     visitedStops.clear();
+    updateTourPosition();
   }
+
+  // Check immediately if starting at an unvisited stop (e.g., Stop 1 at distance 0)
+  checkStopArrival();
+  if (!tourActive) return;
 
   lastFrameTimestamp = performance.now();
 
@@ -804,7 +920,10 @@ function startTour() {
     if (currentTourDistance >= totalRouteDistance) {
       currentTourDistance = totalRouteDistance;
       updateTourPosition();
-      pauseTour(true);
+      checkStopArrival();
+      if (tourActive) {
+        pauseTour(true);
+      }
       return;
     }
 
@@ -844,7 +963,7 @@ function pauseTour(userInitiated = true) {
   }
 }
 
-function updateTourPosition() {
+function updateTourPosition(shouldPan = true) {
   if (currentTourDistance < 0) currentTourDistance = 0;
   if (currentTourDistance > totalRouteDistance) currentTourDistance = totalRouteDistance;
 
@@ -862,7 +981,7 @@ function updateTourPosition() {
 
   // Only pan map in Explorer View (in Poster View keep framing steady for full-poster viewing)
   const isExplorer = document.getElementById('mode-explorer-btn')?.classList.contains('active');
-  if (isExplorer) {
+  if (shouldPan && isExplorer) {
     map.panTo([pt.lat, pt.lon], { animate: true, duration: 0.15 });
   }
 }
@@ -902,26 +1021,7 @@ function checkStopArrival() {
 
       // Check if Spooky Voice narration is active
       if (window.spookyNarrator && window.spookyNarrator.enabled) {
-        const wasAutoTouring = tourActive;
-        if (wasAutoTouring) {
-          tourPausedForSpeech = true;
-          window.tourPausedForSpeech = true;
-          pauseTour(false /* paused for speech, keep speech alive */);
-        }
-
-        window.spookyNarrator.readStop(sd.stop, () => {
-          if (tourPausedForSpeech) {
-            tourPausedForSpeech = false;
-            window.tourPausedForSpeech = false;
-            // Short eerie pause before continuing along the road
-            speechResumeTimeout = setTimeout(() => {
-              speechResumeTimeout = null;
-              if (!tourActive && !tourPausedForSpeech) {
-                startTour();
-              }
-            }, 800);
-          }
-        });
+        triggerStopNarration(sd.stop, tourActive);
       }
       break;
     }
@@ -929,16 +1029,18 @@ function checkStopArrival() {
 }
 
 function stepTour(direction) {
+  const wasTouring = tourActive || tourPausedForSpeech || Boolean(speechResumeTimeout);
   if (speechResumeTimeout) {
     clearTimeout(speechResumeTimeout);
     speechResumeTimeout = null;
   }
-  if (window.spookyNarrator) window.spookyNarrator.stop();
+  if (tourActive) {
+    pauseTour(false);
+  }
   tourPausedForSpeech = false;
   window.tourPausedForSpeech = false;
-  if (!tourActive) {
-    const playBtn = document.getElementById('tour-play-btn');
-    if (playBtn) playBtn.innerHTML = '▶';
+  if (window.spookyNarrator) {
+    window.spookyNarrator.stop();
   }
 
   currentStopIndex += direction;
@@ -947,11 +1049,14 @@ function stepTour(direction) {
 
   const target = stopDistances[currentStopIndex];
   if (target) {
-    currentTourDistance = target.distance;
-    updateTourPosition();
-    visitedStops.add(target.stop.number);
-    selectStop(target.stop.number, false, true);
-    updateTourDockInfo(target.stop);
+    const isVoiceOn = Boolean(window.spookyNarrator && window.spookyNarrator.enabled);
+    selectStop(target.stop.number, false, true, wasTouring && isVoiceOn);
+    if (wasTouring && !isVoiceOn) {
+      startTour();
+    } else if (!wasTouring && !isVoiceOn) {
+      const playBtn = document.getElementById('tour-play-btn');
+      if (playBtn) playBtn.innerHTML = '▶';
+    }
   }
 }
 
@@ -1055,6 +1160,20 @@ function initUIEvents(data) {
     }
     audioBtn.classList.toggle('active', !isMuted);
     audioBtn.innerHTML = !isMuted ? '🔔 Audio: On' : '🔕 Audio: Off';
+
+    if (!isMuted && window.hauntedAudio) {
+      const unlockAudio = (e) => {
+        if (e.target && e.target.closest && e.target.closest('#audio-toggle-btn')) return;
+        if (!window.hauntedAudio.isMuted) {
+          window.hauntedAudio.init();
+          if (window.hauntedAudio.ctx && window.hauntedAudio.ctx.state === 'suspended') {
+            window.hauntedAudio.ctx.resume();
+          }
+        }
+      };
+      window.addEventListener('pointerdown', unlockAudio, { once: true });
+      window.addEventListener('keydown', unlockAudio, { once: true });
+    }
 
     audioBtn.addEventListener('click', () => {
       if (window.hauntedAudio) {

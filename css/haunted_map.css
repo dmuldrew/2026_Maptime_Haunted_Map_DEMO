@@ -507,6 +507,11 @@ html, body {
 .voice-wave-indicator span:nth-child(2) { height: 12px; animation-delay: 0.3s; }
 .voice-wave-indicator span:nth-child(3) { height: 8px; animation-delay: 0.2s; }
 
+.voice-wave-indicator.paused span {
+  animation-play-state: paused;
+  opacity: 0.55;
+}
+
 @keyframes waveBounce {
   0% { height: 3px; opacity: 0.5; }
   100% { height: 12px; opacity: 1; }
