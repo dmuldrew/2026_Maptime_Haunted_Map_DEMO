@@ -445,13 +445,21 @@ function selectStop(number, openDrawer = true, shouldSpeak = true, continueTourA
     updateTourPosition(false);
   }
 
-  if (window.spookyNarrator && (!shouldSpeak || !window.spookyNarrator.enabled)) {
-    window.spookyNarrator.stop();
+  if (window.spookyNarrator) {
+    if (!shouldSpeak || !window.spookyNarrator.enabled) {
+      window.spookyNarrator.stop();
+    } else {
+      window.spookyNarrator.activeStopNumber = number;
+    }
   }
 
-  unhighlightPins();
-  unhighlightCards();
-  unhighlightLeaders();
+  document.querySelectorAll('.creature-marker-pin').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.folklore-card').forEach(c => c.classList.remove('highlighted', 'reading-active'));
+  cardMarkersList.forEach(c => {
+    if (c.leaderLine) {
+      c.leaderLine.setStyle({ color: '#f5b041', weight: 2.0, opacity: 0.85 });
+    }
+  });
 
   highlightPin(number);
   highlightCard(number);
@@ -1039,11 +1047,15 @@ function stepTour(direction) {
   }
   tourPausedForSpeech = false;
   window.tourPausedForSpeech = false;
-  if (window.spookyNarrator) {
-    window.spookyNarrator.stop();
+
+  const currStopDist = stopDistances[currentStopIndex] ? stopDistances[currentStopIndex].distance : 0;
+  const isBetweenStops = currentTourDistance > currStopDist + 25000;
+  if (direction < 0 && isBetweenStops) {
+    // Cursor has moved past currentStopIndex; step back to currentStopIndex
+  } else {
+    currentStopIndex += direction;
   }
 
-  currentStopIndex += direction;
   if (currentStopIndex < 0) currentStopIndex = stopDistances.length - 1;
   if (currentStopIndex >= stopDistances.length) currentStopIndex = 0;
 

@@ -22,8 +22,11 @@ class SpookyNarrator {
     this.boundaryFired = false;
     this.wordInterval = null;
     this.fallbackTimeout = null;
+    this.speakDelayTimeout = null;
     this.bannerHideTimeout = null;
     this.heartbeatInterval = null;
+    this.lastCancelTime = 0;
+    this.utteranceStartTime = 0;
     this.onFinishCallback = null;
 
     this.initVoices();
@@ -129,13 +132,30 @@ class SpookyNarrator {
       return;
     }
 
-    // Stop any ongoing speech cleanly
-    this.stop();
-
+    // Clean up any previous speech state without hiding banner prematurely
+    this._clearTimers();
     if (this.bannerHideTimeout) {
       clearTimeout(this.bannerHideTimeout);
       this.bannerHideTimeout = null;
     }
+    this._detachUtterance();
+
+    if ('speechSynthesis' in window) {
+      if (window.speechSynthesis.speaking || window.speechSynthesis.pending || window.speechSynthesis.paused) {
+        window.speechSynthesis.cancel();
+        this.lastCancelTime = performance.now();
+      }
+    }
+
+    document.querySelectorAll('.folklore-card').forEach(c => {
+      if (c.id !== `card-${item.number}`) {
+        c.classList.remove('reading-active');
+        const titleEl = c.querySelector('.card-title');
+        if (titleEl) titleEl.classList.remove('title-speaking');
+        const wave = c.querySelector('.voice-wave-indicator');
+        if (wave) wave.remove();
+      }
+    });
 
     this.activeItem = item;
     this.activeStopNumber = item.number;
@@ -179,6 +199,10 @@ class SpookyNarrator {
   }
 
   _clearTimers() {
+    if (this.speakDelayTimeout) {
+      clearTimeout(this.speakDelayTimeout);
+      this.speakDelayTimeout = null;
+    }
     if (this.fallbackTimeout) {
       clearTimeout(this.fallbackTimeout);
       this.fallbackTimeout = null;
@@ -202,49 +226,64 @@ class SpookyNarrator {
     }
   }
 
-  _scheduleFallbackWordTimer(rate, delayMs) {
+  _scheduleFallbackWordTimer(rate, delayMs, isResumingInDesc = false) {
     if (this.fallbackTimeout) clearTimeout(this.fallbackTimeout);
+    if (this.wordInterval) clearInterval(this.wordInterval);
     const item = this.activeItem;
     if (!item) return;
 
-    this.fallbackTimeout = setTimeout(() => {
-      this.fallbackTimeout = null;
-      if (!this.boundaryFired && this.isSpeaking && !this.isPaused && this.activeStopNumber === item.number) {
-        this.unhighlightTitle(item.number);
-        let fallbackWordIdx = Math.max(0, this.currentWordIndex);
-        const estimatedWordMs = Math.max(340, Math.round(60000 / (115 * rate)));
-        if (this.wordInterval) clearInterval(this.wordInterval);
-        this.wordInterval = setInterval(() => {
-          if (!this.isSpeaking || this.isPaused || this.activeStopNumber !== item.number || this.boundaryFired) {
-            clearInterval(this.wordInterval);
-            this.wordInterval = null;
-            return;
-          }
-          if (fallbackWordIdx < this.wordRanges.length) {
-            this.currentWordIndex = fallbackWordIdx;
-            this.currentCharIndex = this.descOffset + this.wordRanges[fallbackWordIdx].start;
-            this.highlightWord(item.number, fallbackWordIdx);
-            fallbackWordIdx++;
-          } else {
-            clearInterval(this.wordInterval);
-            this.wordInterval = null;
-          }
-        }, estimatedWordMs);
+    const estimatedWordMs = Math.max(340, Math.round(60000 / (115 * rate)));
+
+    const startIntervalFrom = (startIdx) => {
+      if (!this.isSpeaking || this.isPaused || this.activeStopNumber !== item.number || this.boundaryFired) {
+        return;
       }
-    }, delayMs);
+      this.unhighlightTitle(item.number);
+      let fallbackWordIdx = Math.max(0, startIdx);
+
+      // Highlight the initial word immediately upon entering description
+      if (fallbackWordIdx < this.wordRanges.length) {
+        this.currentWordIndex = fallbackWordIdx;
+        this.currentCharIndex = this.descOffset + this.wordRanges[fallbackWordIdx].start;
+        this.highlightWord(item.number, fallbackWordIdx);
+        fallbackWordIdx++;
+      }
+
+      if (this.wordInterval) clearInterval(this.wordInterval);
+      this.wordInterval = setInterval(() => {
+        if (!this.isSpeaking || this.isPaused || this.activeStopNumber !== item.number || this.boundaryFired) {
+          clearInterval(this.wordInterval);
+          this.wordInterval = null;
+          return;
+        }
+        if (fallbackWordIdx < this.wordRanges.length) {
+          this.currentWordIndex = fallbackWordIdx;
+          this.currentCharIndex = this.descOffset + this.wordRanges[fallbackWordIdx].start;
+          this.highlightWord(item.number, fallbackWordIdx);
+          fallbackWordIdx++;
+        } else {
+          clearInterval(this.wordInterval);
+          this.wordInterval = null;
+        }
+      }, estimatedWordMs);
+    };
+
+    if (isResumingInDesc) {
+      startIntervalFrom(Math.max(0, this.currentWordIndex));
+    } else {
+      this.fallbackTimeout = setTimeout(() => {
+        this.fallbackTimeout = null;
+        startIntervalFrom(Math.max(0, this.currentWordIndex));
+      }, delayMs);
+    }
   }
 
-  _startUtterance(startCharOffset = 0) {
+  _startUtterance(startCharOffset = 0, isRetry = false) {
     const item = this.activeItem;
     if (!item || !('speechSynthesis' in window)) return;
 
     this._clearTimers();
     this._detachUtterance();
-
-    window.speechSynthesis.cancel();
-    if (window.speechSynthesis.paused) {
-      window.speechSynthesis.resume();
-    }
 
     const textSlice = this.fullText.slice(startCharOffset);
     if (!textSlice.trim()) {
@@ -255,6 +294,7 @@ class SpookyNarrator {
     this.isSpeaking = true;
     this.isPaused = false;
     this.needsRespeak = false;
+    this.boundaryFired = false;
 
     const playBtn = document.getElementById('tour-play-btn');
     if (playBtn) {
@@ -273,91 +313,129 @@ class SpookyNarrator {
       if (wave) wave.classList.remove('paused');
     }
 
-    const utterance = new SpeechSynthesisUtterance(textSlice);
-    const config = this.getVoiceConfig();
-    if (config.voice) {
-      utterance.voice = config.voice;
+    if (startCharOffset >= this.descOffset && this.currentWordIndex >= 0) {
+      this.unhighlightTitle(item.number);
+      this.highlightWord(item.number, this.currentWordIndex);
     }
-    utterance.pitch = config.pitch;
-    utterance.rate = config.rate;
-    utterance.volume = 1.0;
 
-    this.activeUtterance = utterance;
+    const synthBusy = window.speechSynthesis.speaking || window.speechSynthesis.pending || window.speechSynthesis.paused;
+    if (synthBusy) {
+      window.speechSynthesis.cancel();
+      this.lastCancelTime = performance.now();
+    }
 
-    // Browser onboundary event: maps EXACT charIndex in fullText
-    utterance.onboundary = (e) => {
-      if (this.activeUtterance !== utterance || this.isPaused) return;
-      this.boundaryFired = true;
-      if (this.fallbackTimeout) {
-        clearTimeout(this.fallbackTimeout);
-        this.fallbackTimeout = null;
+    const timeSinceCancel = performance.now() - (this.lastCancelTime || 0);
+    const delayMs = (synthBusy || timeSinceCancel < 80) ? 65 : 0;
+
+    const launchSpeech = () => {
+      this.speakDelayTimeout = null;
+      if (!this.isSpeaking || this.isPaused || this.activeItem !== item) return;
+
+      const utterance = new SpeechSynthesisUtterance(textSlice);
+      const config = this.getVoiceConfig();
+      if (config.voice) {
+        utterance.voice = config.voice;
       }
-      if (this.wordInterval) {
-        clearInterval(this.wordInterval);
-        this.wordInterval = null;
-      }
+      utterance.pitch = config.pitch;
+      utterance.rate = config.rate;
+      utterance.volume = 1.0;
 
-      const relChar = typeof e.charIndex === 'number' ? e.charIndex : -1;
-      if (relChar >= 0) {
-        const charIndex = startCharOffset + relChar;
-        this.currentCharIndex = charIndex;
-        if (charIndex < this.descOffset) {
-          // Synthesizer is currently reading the title words
-          this.highlightTitle(item.number);
-          this.clearDescriptionHighlight(item.number);
-        } else {
-          // Synthesizer is currently reading the description words!
-          this.unhighlightTitle(item.number);
-          const charInDesc = charIndex - this.descOffset;
+      this.activeUtterance = utterance;
+      this.utteranceStartTime = performance.now();
 
-          let targetWord = null;
-          for (let i = 0; i < this.wordRanges.length; i++) {
-            const w = this.wordRanges[i];
-            if (charInDesc >= w.start && charInDesc <= w.end) {
-              targetWord = w;
-              break;
-            }
+      // Browser onboundary event: maps EXACT charIndex in fullText
+      utterance.onboundary = (e) => {
+        if (this.activeUtterance !== utterance || this.isPaused) return;
+        const relChar = typeof e.charIndex === 'number' ? e.charIndex : -1;
+
+        // Only disable fallback timer once onboundary proves it fires word boundaries inside the description
+        if (relChar > 0 && (startCharOffset + relChar) > this.descOffset) {
+          this.boundaryFired = true;
+          if (this.fallbackTimeout) {
+            clearTimeout(this.fallbackTimeout);
+            this.fallbackTimeout = null;
           }
-          if (!targetWord) {
+          if (this.wordInterval) {
+            clearInterval(this.wordInterval);
+            this.wordInterval = null;
+          }
+        }
+
+        if (relChar >= 0) {
+          const charIndex = startCharOffset + relChar;
+          this.currentCharIndex = charIndex;
+          if (charIndex < this.descOffset) {
+            // Synthesizer is currently reading the title words
+            this.highlightTitle(item.number);
+            this.clearDescriptionHighlight(item.number);
+          } else {
+            // Synthesizer is currently reading the description words!
+            this.unhighlightTitle(item.number);
+            const charInDesc = charIndex - this.descOffset;
+
+            let targetWord = null;
             for (let i = 0; i < this.wordRanges.length; i++) {
-              if (this.wordRanges[i].start >= charInDesc) {
-                targetWord = this.wordRanges[i];
+              const w = this.wordRanges[i];
+              if (charInDesc >= w.start && charInDesc <= w.end) {
+                targetWord = w;
                 break;
               }
             }
-          }
+            if (!targetWord) {
+              for (let i = 0; i < this.wordRanges.length; i++) {
+                if (this.wordRanges[i].start >= charInDesc) {
+                  targetWord = this.wordRanges[i];
+                  break;
+                }
+              }
+            }
 
-          if (targetWord) {
-            this.currentWordIndex = targetWord.index;
-            this.currentCharIndex = this.descOffset + targetWord.start;
-            this.highlightWord(item.number, targetWord.index);
+            if (targetWord) {
+              this.currentWordIndex = targetWord.index;
+              this.currentCharIndex = this.descOffset + targetWord.start;
+              this.highlightWord(item.number, targetWord.index);
+            }
           }
         }
-      }
+      };
+
+      // Synchronized fallback timer if the voice does not fire word boundary events
+      const isResumingInDesc = startCharOffset >= this.descOffset;
+      this._scheduleFallbackWordTimer(config.rate, 1200, isResumingInDesc);
+
+      utterance.onend = () => {
+        if (this.activeUtterance !== utterance) return;
+        if (this.isPaused) {
+          this.needsRespeak = true;
+          return;
+        }
+        this.handleSpeechEnd();
+      };
+
+      utterance.onerror = () => {
+        if (this.activeUtterance !== utterance) return;
+        if (this.isPaused) {
+          this.needsRespeak = true;
+          return;
+        }
+        // If browser canceled/interrupted the newly queued utterance due to async cancel IPC, retry once
+        const elapsed = performance.now() - (this.utteranceStartTime || 0);
+        if (!isRetry && elapsed < 600) {
+          this.lastCancelTime = performance.now();
+          this._startUtterance(this.currentCharIndex, true);
+          return;
+        }
+        this.handleSpeechEnd();
+      };
+
+      window.speechSynthesis.speak(utterance);
     };
 
-    // Synchronized fallback timer ONLY if the voice does not fire onboundary events
-    this._scheduleFallbackWordTimer(config.rate, startCharOffset > 0 ? 350 : 1400);
-
-    utterance.onend = () => {
-      if (this.activeUtterance !== utterance) return;
-      if (this.isPaused) {
-        this.needsRespeak = true;
-        return;
-      }
-      this.handleSpeechEnd();
-    };
-
-    utterance.onerror = () => {
-      if (this.activeUtterance !== utterance) return;
-      if (this.isPaused) {
-        this.needsRespeak = true;
-        return;
-      }
-      this.handleSpeechEnd();
-    };
-
-    window.speechSynthesis.speak(utterance);
+    if (delayMs > 0) {
+      this.speakDelayTimeout = setTimeout(launchSpeech, delayMs);
+    } else {
+      launchSpeech();
+    }
   }
 
   pause() {
@@ -366,9 +444,16 @@ class SpookyNarrator {
     this.isSpeaking = false;
 
     this._clearTimers();
+    this._detachUtterance();
 
-    if ('speechSynthesis' in window && (window.speechSynthesis.speaking || window.speechSynthesis.pending)) {
-      window.speechSynthesis.pause();
+    // Ensure currentCharIndex aligns cleanly with the start of the active word
+    if (this.currentWordIndex >= 0 && this.wordRanges[this.currentWordIndex]) {
+      this.currentCharIndex = this.descOffset + this.wordRanges[this.currentWordIndex].start;
+    }
+
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      this.lastCancelTime = performance.now();
     }
 
     if (window.hauntedAudio) {
@@ -404,35 +489,7 @@ class SpookyNarrator {
       this.bannerHideTimeout = null;
     }
 
-    this.isPaused = false;
-    this.isSpeaking = true;
-
-    const playBtn = document.getElementById('tour-play-btn');
-    if (playBtn) {
-      playBtn.innerHTML = '❚❚';
-      playBtn.title = 'Pause narration or tour';
-    }
-
-    if (window.hauntedAudio) {
-      window.hauntedAudio.startNarrationBed();
-    }
-
-    this.highlightCardStart(this.activeItem);
-    const card = document.getElementById(`card-${this.activeItem.number}`);
-    if (card) {
-      const wave = card.querySelector('.voice-wave-indicator');
-      if (wave) wave.classList.remove('paused');
-    }
-
-    if (!this.needsRespeak && window.speechSynthesis.speaking && window.speechSynthesis.paused) {
-      window.speechSynthesis.resume();
-      if (!this.boundaryFired) {
-        const config = this.getVoiceConfig();
-        this._scheduleFallbackWordTimer(config.rate, 300);
-      }
-    } else {
-      this._startUtterance(this.currentCharIndex);
-    }
+    this._startUtterance(this.currentCharIndex);
   }
 
   highlightCardStart(item) {
@@ -614,9 +671,9 @@ class SpookyNarrator {
     this._detachUtterance();
 
     if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-      if (window.speechSynthesis.paused) {
-        window.speechSynthesis.resume();
+      if (window.speechSynthesis.speaking || window.speechSynthesis.pending || window.speechSynthesis.paused) {
+        window.speechSynthesis.cancel();
+        this.lastCancelTime = performance.now();
       }
     }
     if (window.hauntedAudio) {
